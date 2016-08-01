@@ -3,10 +3,10 @@
 # yamldump
 #   pretty prints yaml files as python objects
 #
-# args
+# args:
 #   - any number of yaml files to print
 #
-# todo
+# todo:
 #   - optionally pre-pass through jinja2
 #
 # http://smemsh.net/src/utilsh/
