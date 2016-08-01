@@ -14,21 +14,23 @@
 # scott@smemsh.net
 #
 ##############################################################################
+"""
+parse and dump a yaml file
+    args: filenames to dump"
+"""
 
 import yaml
 import sys
 from pprint import pprint as pp
 
 
-def usage(invname):
+###
 
-    print(
-        "{}: parse and dump a yaml file\n"
-        "takes filenames as arguments"
-        .format(invname)
-    )
+def usagex():
+    print("{}:".format(invname), __doc__.strip())
     quit()
 
+###
 
 def main():
 
