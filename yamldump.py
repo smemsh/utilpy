@@ -20,7 +20,7 @@ parse and dump a yaml file
 """
 
 import yaml
-import sys
+from sys import argv
 from pprint import pprint as pp
 
 
@@ -34,10 +34,8 @@ def usagex():
 
 def main():
 
-    invname = sys.argv.pop(0)
-    args = sys.argv
-    if not len(args) >= 1:
-        usage(invname)
+    if (nargs == 0):
+        usagex()
 
     for filename in args:
         try:
@@ -55,6 +53,13 @@ def main():
             print("{}: unhandled exception".format(invname))
             raise
 
+###
 
-if __name__ == "__main__":
+if (__name__ == "__main__"):
+
+    invname = argv[0]
+    args = argv[1:]
+    nargs = len(args)
+
     main()
+#
