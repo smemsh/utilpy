@@ -19,10 +19,10 @@ parse and dump a yaml file
     args: filenames to dump"
 """
 
-import yaml
 from sys import argv
-from pprint import pprint as pp
 
+from pprint import pprint as pp
+import yaml
 
 ###
 
