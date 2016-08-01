@@ -19,6 +19,7 @@ import yaml
 import sys
 import pprint
 
+
 def usage(invname):
 
     print(
@@ -27,6 +28,7 @@ def usage(invname):
         .format(invname)
     )
     quit()
+
 
 def main():
 
@@ -50,6 +52,7 @@ def main():
         except:
             print("{}: unhandled exception".format(invname))
             raise
+
 
 if __name__ == "__main__":
     main()
