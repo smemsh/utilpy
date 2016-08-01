@@ -17,7 +17,7 @@
 
 import yaml
 import sys
-import pprint
+from pprint import pprint as pp
 
 
 def usage(invname):
@@ -42,7 +42,7 @@ def main():
             with open(filename, "r") as f:
                 contents = f.read()
             yamlstr = yaml.load(contents)
-            pprint.pprint(yamlstr)
+            pp(yamlstr)
 
         except FileNotFoundError:
             print("{}: {}: nsfod"
