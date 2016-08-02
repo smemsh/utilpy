@@ -45,8 +45,7 @@ def main():
             pp(yamlstr)
 
         except FileNotFoundError:
-            print("{}: {}: nsfod"
-                  .format(invname, filename))
+            print("{}: {}: nsfod".format(invname, filename))
             quit()
 
         except:
