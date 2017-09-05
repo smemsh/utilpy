@@ -47,6 +47,7 @@ from string import digits
 
 #
 PASSLEN = 22
+CHARSET = set(letters + digits) ^ set("0Ol1I")
 
 #
 def usagex():
@@ -60,7 +61,7 @@ def passgen(random, charset, length):
 
     s = str()
     for _ in range(length):
-        s += random.choice(charset)
+        s += random.choice(list(charset))
 
     return s
 
@@ -72,8 +73,7 @@ def main():
         usagex()
 
     rng = Rng()
-    chars = list(set(letters + digits) ^ set("0Ol1I"))
-    password = passgen(rng, chars, PASSLEN)
+    password = passgen(rng, CHARSET, PASSLEN)
 
     print(password, end='')
     if (stdout.isatty()):
