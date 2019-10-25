@@ -41,7 +41,7 @@ def main():
         try:
             with open(filename, "r") as f:
                 contents = f.read()
-            yamlstr = yaml.load(contents)
+            yamlstr = yaml.safe_load(contents)
             pp(yamlstr)
 
         except FileNotFoundError:
