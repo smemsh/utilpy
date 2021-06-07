@@ -15,10 +15,12 @@ __license__ = 'GPL-2.0'
 import argparse
 
 from sys import argv, stderr, exit
-from os import environ
+from os import environ, getcwd
 
 from os import EX_OK as EXIT_SUCCESS
 from os import EX_SOFTWARE as EXIT_FAILURE
+
+from os.path import basename
 
 #
 
@@ -58,15 +60,30 @@ def process_args():
 
     args.ask = True if not args.force else False
 
+    if args.quiet and args.ask:
+        bomb("quiet mode cannot be interactive")
+    if args.dryrun and args.force:
+        bomb("the force is not with you")
+
+    src = args.src if args.src else getcwd()
+    dst = args.dest if args.dest else getenv('HOME')
+    src = src[:-1] if src[-1] == '/' else src
+    dst = dst[:-1] if dst[-1] == '/' else dst
+
+    if invname == 'installx' and not args.dest:
+        dst = dst + '/bin'
+
+    return src, dst
+
+
 def main():
 
-    process_args()
-    print(args)
+    src, dst = process_args()
 
 
 if (__name__ == "__main__"):
 
-    invname = argv[0]
+    invname = basename(argv[0])
     args = argv[1:]
     nargs = len(args)
 
