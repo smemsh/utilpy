@@ -14,8 +14,11 @@ __license__ = 'GPL-2.0'
 
 import argparse
 
-from sys import argv, stderr, exit
+from sys import argv, stdin, stdout, stderr, exit
 from os import environ, getcwd
+
+from termios import tcgetattr, tcsetattr, TCSADRAIN
+from tty import setraw
 
 from os import EX_OK as EXIT_SUCCESS
 from os import EX_SOFTWARE as EXIT_FAILURE
@@ -43,6 +46,14 @@ def process_args():
 
     def addarg(parser, varname, vardesc):
         parser.add_argument(varname, nargs='?', metavar=vardesc)
+
+    def getchar():
+        fd = stdin.fileno()
+        tattrs = tcgetattr(fd)
+        setraw(fd)
+        c = stdin.buffer.raw.read(1).decode(stdin.encoding)
+        tcsetattr(fd, TCSADRAIN, tattrs)
+        return c
 
     p = argparse.ArgumentParser(
         prog            = invname,
@@ -72,6 +83,12 @@ def process_args():
 
     if invname == 'installx' and not args.dest:
         dst = dst + '/bin'
+
+    if args.ask:
+        print(f"overwrite in '{dst}/' with '{src}/*' (y/n)? ", end='')
+        stdout.flush()
+        yn = getchar(); print()
+        if yn != 'y': bomb('aborting')
 
     return src, dst
 
