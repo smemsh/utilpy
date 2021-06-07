@@ -22,10 +22,6 @@ from os import EX_SOFTWARE as EXIT_FAILURE
 
 #
 
-args = None
-
-#
-
 def err(*args, **kwargs):
     print(*args, file=stderr, **kwargs)
 
@@ -36,6 +32,8 @@ def bomb(*args):
 ###
 
 def process_args():
+
+    global args
 
     def addflag(parser, flagchar, longopt):
         options = list(("-%s --%s" % (flagchar, longopt)).split())
@@ -56,12 +54,12 @@ def process_args():
     addarg  (p, 'src', 'srcdir')
     addarg  (p, 'dest', 'destdir')
 
-    return p.parse_args(args)
+    args = p.parse_args(args)
 
 
 def main():
 
-    args = process_args()
+    process_args()
     print(args)
 
 
