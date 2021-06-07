@@ -35,9 +35,9 @@ def process_args():
 
     global args
 
-    def addflag(parser, flagchar, longopt):
+    def addflag(parser, flagchar, longopt, **kwargs):
         options = list(("-%s --%s" % (flagchar, longopt)).split())
-        parser.add_argument(*options, action='store_true')
+        parser.add_argument(*options, action='store_true', **kwargs)
 
     def addarg(parser, varname, vardesc):
         parser.add_argument(varname, nargs=1, metavar=vardesc)
