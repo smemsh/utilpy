@@ -40,7 +40,7 @@ def process_args():
         parser.add_argument(*options, action='store_true', **kwargs)
 
     def addarg(parser, varname, vardesc):
-        parser.add_argument(varname, nargs=1, metavar=vardesc)
+        parser.add_argument(varname, nargs='?', metavar=vardesc)
 
     p = argparse.ArgumentParser(
         prog            = invname,
