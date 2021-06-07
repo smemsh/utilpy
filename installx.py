@@ -48,7 +48,7 @@ def process_args():
         allow_abbrev    = False,
         formatter_class = argparse.RawTextHelpFormatter,
     )
-    addflag (p, 'n', 'test')
+    addflag (p, 'n', 'test', dest='dryrun')
     addflag (p, 'q', 'quiet')
     addflag (p, 'f', 'force')
     addarg  (p, 'src', 'srcdir')
@@ -56,6 +56,7 @@ def process_args():
 
     args = p.parse_args(args)
 
+    args.ask = True if not args.force else False
 
 def main():
 
