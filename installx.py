@@ -15,7 +15,8 @@ __license__ = 'GPL-2.0'
 import argparse
 
 from sys import argv, stdin, stdout, stderr, exit
-from os import environ, getcwd
+from os import environ, getcwd, chdir, getenv, makedirs, access, W_OK
+from os.path import isdir
 
 from termios import tcgetattr, tcsetattr, TCSADRAIN
 from tty import setraw
@@ -93,9 +94,26 @@ def process_args():
     return src, dst
 
 
+def check_sanity(src, dst):
+
+    if not isdir(dst):
+        try: makedirs(dst, exist_ok=True)
+        except: bomb(f"dest '{dst}' dns or bad mkdir")
+
+    if not isdir(src):
+        bomb("source dir invalid")
+
+    if not access(dst, W_OK):
+        bomb(f"cannot write to destdir '{dst}'")
+
+
 def main():
 
     src, dst = process_args()
+    check_sanity(src, dst)
+
+    try: chdir(src)
+    except: bomb(f"cannot change directory to '{src}'")
 
 
 if (__name__ == "__main__"):
