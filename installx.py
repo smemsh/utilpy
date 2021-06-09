@@ -119,7 +119,7 @@ def main():
     except (KeyError, TypeError):
         bomb(f"unimplemented command '{invname}'")
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
 
     invname = basename(argv[0])
     args = argv[1:]
