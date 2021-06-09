@@ -15,8 +15,14 @@ __license__ = 'GPL-2.0'
 import argparse
 
 from sys import argv, stdin, stdout, stderr, exit
-from os import environ, getcwd, chdir, getenv, makedirs, access, W_OK
-from os.path import isdir
+from os import (
+    getcwd, chdir,
+    environ, getenv,
+    makedirs, scandir,
+    readlink, access,
+    W_OK, X_OK,
+)
+from os.path import isdir, isfile
 
 from termios import tcgetattr, tcsetattr, TCSADRAIN
 from tty import setraw
@@ -105,6 +111,28 @@ def check_sanity(src, dst):
 
     if not access(dst, W_OK):
         bomb(f"cannot write to destdir '{dst}'")
+
+
+def find_candidates():
+
+    scripts = []; exelinks = []; rclinks = []
+
+    entries = scandir('.')
+    for f in entries:
+        if f.is_file() and access(f.name, X_OK):
+            scripts.append(f)
+        elif f.is_symlink():
+            target = readlink(f.name)
+            if isfile(target) and '/' not in target:
+                if access(f.name, X_OK):
+                    exelinks.append(f)
+                elif f.name[0] == '.':
+                    rclinks.append(f)
+
+    installx = scripts + exelinks
+    installrc = rclinks
+
+    return locals()[invname]
 
 
 def main():
