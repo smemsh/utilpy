@@ -14,23 +14,22 @@ __license__ = 'GPL-2.0'
 
 import argparse
 
+from termios import tcgetattr, tcsetattr, TCSADRAIN
 from sys import argv, stdin, stdout, stderr, exit
+from tty import setraw
+
+from os.path import isdir, isfile
+from os.path import basename
+
 from os import (
+    access, W_OK, X_OK,
     getcwd, chdir,
     environ, getenv,
     makedirs, scandir,
-    readlink, access,
-    W_OK, X_OK,
+    readlink,
+    EX_OK as EXIT_SUCCESS,
+    EX_SOFTWARE as EXIT_FAILURE,
 )
-from os.path import isdir, isfile
-
-from termios import tcgetattr, tcsetattr, TCSADRAIN
-from tty import setraw
-
-from os import EX_OK as EXIT_SUCCESS
-from os import EX_SOFTWARE as EXIT_FAILURE
-
-from os.path import basename
 
 #
 
