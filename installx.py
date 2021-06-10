@@ -15,18 +15,19 @@ __license__ = 'GPL-2.0'
 import argparse
 
 from termios import tcgetattr, tcsetattr, TCSADRAIN
+from shutil import copy
 from sys import argv, stdin, stdout, stderr, exit
 from tty import setraw
 
 from os.path import isdir, isfile
-from os.path import basename
+from os.path import basename, relpath, realpath
 
 from os import (
     access, W_OK, X_OK,
     getcwd, chdir,
     environ, getenv,
     makedirs, scandir,
-    readlink,
+    readlink, unlink, symlink,
     EX_OK as EXIT_SUCCESS,
     EX_SOFTWARE as EXIT_FAILURE,
 )
@@ -135,6 +136,48 @@ def find_candidates():
     installrc = [f.name for f in rclinks], targets
 
     return locals()[invname]
+
+
+###
+
+def installx(dst):
+
+    count = 0
+    for file in find_candidates():
+        count += 1
+        if args.dryrun:
+            print(f"test: {dst}/{file}")
+            continue
+        try: unlink(f"{dst}/{file}") # always set our own perms
+        except FileNotFoundError: pass
+
+        copy(file, dst)
+
+    return count
+
+
+def installrc(dst):
+
+    symlinks, targets = find_candidates()
+    count = 0
+    src = getcwd()
+
+    for link in symlinks:
+        count += 1
+        ref = targets[link]
+        reltarget = relpath(f"{src}/{ref}", start=realpath(dst))
+        linkpath = f"{dst}/{link}"
+
+        if args.dryrun:
+            print(f"testmode: {dst}/{link} -> {reltarget}")
+            continue
+
+        try: unlink(linkpath)
+        except FileNotFoundError: pass
+
+        symlink(reltarget, linkpath)
+
+    return count
 
 
 def main():
