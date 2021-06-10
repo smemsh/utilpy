@@ -92,7 +92,8 @@ def process_args():
         dst = dst + '/bin'
 
     if args.ask:
-        print(f"overwrite in '{dst}/' with '{src}/*' (y/n)? ", end='')
+        action = 'test' if args.dryrun else 'overwrite'
+        print(f"{action} in '{dst}/' with '{src}/*' (y/n)? ", end='')
         stdout.flush()
         yn = getchar(); print()
         if yn != 'y': bomb('aborting')
