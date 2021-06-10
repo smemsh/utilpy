@@ -94,7 +94,7 @@ def process_args():
         action = 'test' if args.dryrun else 'overwrite'
         print(f"{action} in '{dst}/' with '{src}/*' (y/n)? ", end='')
         stdout.flush()
-        yn = getchar(); print()
+        yn = getchar(); print(yn)
         if yn != 'y': bomb('aborting')
 
     return src, dst
