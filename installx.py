@@ -117,8 +117,8 @@ def find_candidates():
 
     scripts = []; exelinks = []; rclinks = []
 
-    entries = scandir('.')
-    for f in entries:
+
+    for f in scandir('.'):
         if f.is_file() and access(f.name, X_OK):
             scripts.append(f)
         elif f.is_symlink():
