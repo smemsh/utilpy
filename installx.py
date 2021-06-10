@@ -116,6 +116,7 @@ def check_sanity(src, dst):
 def find_candidates():
 
     scripts = []; exelinks = []; rclinks = []
+    targets = {};
 
 
     for f in scandir('.'):
@@ -123,6 +124,7 @@ def find_candidates():
             scripts.append(f)
         elif f.is_symlink():
             target = readlink(f.name)
+            targets[f.name] = target
             if isfile(target) and '/' not in target:
                 if access(f.name, X_OK):
                     exelinks.append(f)
@@ -130,7 +132,7 @@ def find_candidates():
                     rclinks.append(f)
 
     installx = [f.name for f in (scripts + exelinks)]
-    installrc = [f.name for f in rclinks]
+    installrc = [f.name for f in rclinks], targets
 
     return locals()[invname]
 
