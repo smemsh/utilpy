@@ -129,8 +129,8 @@ def find_candidates():
                 elif f.name[0] == '.':
                     rclinks.append(f)
 
-    installx = scripts + exelinks
-    installrc = rclinks
+    installx = [f.name for f in (scripts + exelinks)]
+    installrc = [f.name for f in rclinks]
 
     return locals()[invname]
 
