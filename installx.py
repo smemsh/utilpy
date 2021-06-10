@@ -18,6 +18,7 @@ from termios import tcgetattr, tcsetattr, TCSADRAIN
 from shutil import copy
 from sys import argv, stdin, stdout, stderr, exit
 from tty import setraw
+from re import search
 
 from os.path import isdir, isfile
 from os.path import basename, relpath, realpath
@@ -114,6 +115,18 @@ def check_sanity(src, dst):
         bomb(f"cannot write to destdir '{dst}'")
 
 
+def print_execution_stats(src, dst, cnt):
+
+    src = f"{src}/"
+    dst = f"{dst}/"
+
+    if search(r'[^a-zA-Z0-9_/.+,:@-]', src + dst):
+        src = f"\"{src}\""; dst = f"\"{dst}\""
+
+    prefix = 'test: ' if args.dryrun else ''
+    print(f"{prefix}installed {cnt}")
+
+
 def find_candidates():
 
     scripts = []; exelinks = []; rclinks = []
@@ -192,7 +205,10 @@ def main():
     except (KeyError, TypeError):
         bomb(f"unimplemented command '{invname}'")
 
-    subprogram(dst)
+    ninstalled = subprogram(dst)
+
+    if not args.quiet:
+        print_execution_stats(src, dst, ninstalled)
 
 
 if __name__ == "__main__":
