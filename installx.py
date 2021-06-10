@@ -145,9 +145,12 @@ def main():
     try: chdir(src)
     except: bomb(f"cannot change directory to '{src}'")
 
-    try: globals()[invname](src, dst)
+    try: subprogram = globals()[invname]
     except (KeyError, TypeError):
         bomb(f"unimplemented command '{invname}'")
+
+    subprogram(dst)
+
 
 if __name__ == "__main__":
 
