@@ -289,7 +289,6 @@ if __name__ == "__main__":
 
     invname = basename(argv[0])
     args = argv[1:]
-    nargs = len(args)
 
     try:
         if (bool(environ['DEBUG'])):
