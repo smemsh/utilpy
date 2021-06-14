@@ -216,6 +216,10 @@ def main():
 
 if __name__ == "__main__":
 
+    from sys import version_info as pyv
+    if pyv.major < 3 or pyv.major == 3 and pyv.minor < 9:
+        bomb("minimum python 3.9")
+
     invname = basename(argv[0])
     args = argv[1:]
     nargs = len(args)
