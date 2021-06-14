@@ -104,12 +104,15 @@ def process_args():
 
 def check_sanity(src, dst):
 
-    if not isdir(dst):
-        try: makedirs(dst, exist_ok=True)
-        except: bomb(f"dest '{dst}' dns or bad mkdir")
-
     if not isdir(src):
         bomb("source dir invalid")
+
+    if not exists(dst):
+        try: makedirs(dst)
+        except: bomb(f"dest '{dst}' dns or bad mkdir")
+
+    elif not isdir(dst):
+        bomb(f"refusing overwrite of '{dst}' (not a directory)")
 
     if not access(dst, W_OK):
         bomb(f"cannot write to destdir '{dst}'")
