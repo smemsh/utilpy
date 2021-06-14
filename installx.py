@@ -134,7 +134,6 @@ def find_candidates():
     scripts = []; exelinks = []; rclinks = []
     targets = {};
 
-    if debug: breakpoint()
 
     for f in scandir('.'):
         if f.is_file() and access(f.name, X_OK):
@@ -198,8 +197,6 @@ def installrc(dst):
 
 def main():
 
-    if debug: breakpoint()
-
     src, dst = process_args()
     check_sanity(src, dst)
 
@@ -231,5 +228,7 @@ if __name__ == "__main__":
 
     except KeyError:
         debug = False
+
+    if debug: breakpoint()
 
     main()
