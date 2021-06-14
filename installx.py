@@ -136,7 +136,8 @@ def find_candidates():
 
 
     for f in scandir('.'):
-        if f.is_file() and access(f.name, X_OK):
+
+        if f.is_file(follow_symlinks=False) and access(f.name, X_OK):
             scripts.append(f)
         elif f.is_symlink():
             target = readlink(f.name)
@@ -166,7 +167,7 @@ def installx(dst):
         try: unlink(f"{dst}/{file}") # always set our own perms
         except FileNotFoundError: pass
 
-        copy(file, dst)
+        copy(file, dst, follow_symlinks=False)
 
     return count
 
