@@ -292,6 +292,7 @@ if __name__ == "__main__":
 
     try:
         if (bool(environ['DEBUG'])):
+            from pprint import pprint as pp
             debug = True
             err('debug-mode-enabled')
         else:
