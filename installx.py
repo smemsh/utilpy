@@ -132,7 +132,7 @@ def print_execution_stats(src, dst, cnt):
 def find_candidates():
 
     scripts = []; exelinks = []; rclinks = []
-    targets = {};
+    targets = {}
 
 
     for f in scandir('.'):
