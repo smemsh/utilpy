@@ -208,10 +208,10 @@ def main():
     except (KeyError, TypeError):
         bomb(f"unimplemented command '{invname}'")
 
-    ninstalled = subprogram(dst)
+    instcnt = subprogram(src, dst)
 
     if not args.quiet:
-        print_execution_stats(src, dst, ninstalled)
+        print_execution_stats(src, dst, instcnt)
 
 
 if __name__ == "__main__":
