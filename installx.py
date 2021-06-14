@@ -24,11 +24,11 @@ from os.path import isdir, isfile
 from os.path import basename, relpath, realpath
 
 from os import (
-    access, W_OK, X_OK,
     getcwd, chdir,
     environ, getenv,
     makedirs, scandir,
     readlink, unlink, symlink,
+    access, W_OK, X_OK,
     EX_OK as EXIT_SUCCESS,
     EX_SOFTWARE as EXIT_FAILURE,
 )
