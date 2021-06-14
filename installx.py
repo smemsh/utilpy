@@ -2,15 +2,19 @@
 """
 installs in-dir exe files and symlinks, or all .rclinks, to [homedir]
 
-  installx: cp exefiles and symlinks to in-dir exes: ${1:-./} -> ${2:-~/bin/}
-  installrc: cp .rclinks as: ${1:-.}/.rclink -> ${2:-~/${PWD##*/}}/target
+  installx:
+    cp exefiles, and symlinks to in-dir exes, from ${1:-.}/ to ${2:-~/bin}/
+
+  installrc:
+    recreate using relative links in ${2:-~}/, all .rclinks in ${1:-.}/ which
+    target exes in {$1:-.}/, including any intermediate links (with needed
+    mkdirs) in chains of multi-level symlinks, as long as all levels are
+    descendants of ${1:-.}/ and the end target is in ${1:-.}/
 
 """
 __url__     = 'http://smemsh.net/src/utilpy/'
 __author__  = 'Scott Mcdermott <scott@smemsh.net>'
 __license__ = 'GPL-2.0'
-
-###
 
 import argparse
 
@@ -20,9 +24,12 @@ from sys import argv, stdin, stdout, stderr, exit
 from tty import setraw
 from re import search
 
-from os.path import isdir, isfile
-from os.path import basename, relpath, realpath
-
+from os.path import (
+    join, expanduser,
+    basename, dirname,
+    isdir, isfile, exists,
+    relpath, realpath, abspath, normpath, commonpath,
+)
 from os import (
     getcwd, chdir,
     environ, getenv,
@@ -33,7 +40,7 @@ from os import (
     EX_SOFTWARE as EXIT_FAILURE,
 )
 
-#
+###
 
 def err(*args, **kwargs):
     print(*args, file=stderr, **kwargs)
@@ -99,7 +106,7 @@ def process_args():
         yn = getchar(); print(yn)
         if yn != 'y': bomb('aborting')
 
-    return src, dst
+    return abspath(src), abspath(dst)
 
 
 def check_sanity(src, dst):
@@ -122,6 +129,9 @@ def print_execution_stats(src, dst, cnt):
 
     src = f"{src}/"
     dst = f"{dst}/"
+    cnt = f"{cnt[0]} scripts, {cnt[1]} exelinks" \
+          if type(cnt) == list \
+          else f"{cnt} rclinks"
 
     if search(r'[^a-zA-Z0-9_/.+,:@-]', src + dst):
         src = f"\"{src}\""; dst = f"\"{dst}\""
@@ -129,72 +139,128 @@ def print_execution_stats(src, dst, cnt):
     print(f"{prefix}installed {cnt}")
 
 
-def find_candidates():
+def find_candidates(src, dst):
 
     scripts = []; exelinks = []; rclinks = []
     targets = {}
 
+    def abspathdst(path):
+        return join(dst, relpath(path, start=src))
 
     for f in scandir('.'):
 
         if f.is_file(follow_symlinks=False) and access(f.name, X_OK):
             scripts.append(f)
-        elif f.is_symlink():
-            target = readlink(f.name)
-            targets[f.name] = target
-            if isfile(target) and '/' not in target:
-                if access(f.name, X_OK):
-                    exelinks.append(f)
-                elif f.name[0] == '.':
-                    rclinks.append(f)
 
-    installx = [f.name for f in (scripts + exelinks)]
-    installrc = [f.name for f in rclinks], targets
+        elif f.is_symlink():
+
+            endtarget = realpath(f.name)
+            if not isfile(endtarget):
+                continue
+            if dirname(endtarget) != src:
+                continue
+
+            linkchain = []
+            linkname = abspath(f.name)
+            linkchain.append(abspathdst(linkname))
+
+            while True:
+                tdir = dirname(linkname)
+                tlink = readlink(linkname)
+                target = normpath(join(tdir, tlink))
+                if not commonpath([src, target]).startswith(src):
+                    err(f"skipping link {f.name} with component outside {src}")
+                    linkchain = None
+                    break
+                if target == endtarget:
+                    linkchain.append(target)
+                    break
+                else:
+                    linkchain.append(abspathdst(target))
+                    linkname = target
+            if not linkchain:
+                continue
+
+            if access(f.name, X_OK) and len(linkchain) == 2:
+                exelinks.append(f)
+            elif f.name[0] == '.':
+                rclinks.append(f)
+
+            targets[f.name] = linkchain
+
+    installrc = ([f.name for f in rclinks], targets)
+    installx = ([f.name for f in l] for l in [scripts, exelinks]), targets
 
     return locals()[invname]
 
-
 ###
 
-def installx(dst):
+def entilde(path):
+    userhome = expanduser('~')
+    if path.startswith(userhome):
+        path = f"~{path[len(userhome):]}"
+    return path
 
+
+def installx(src, dst):
+
+    counts = [0, 0] # track scripts, exelinks but return one value
+    cntidx = 0
+
+    (scripts, exelinks), targets = find_candidates(src, dst)
+    for lst in [scripts, exelinks]:
+        for file in lst:
+            counts[cntidx] += 1
+            if args.dryrun:
+                symlinktext = \
+                    f"\x20-> {basename(targets[file][1])}" \
+                    if targets.get(file) \
+                    else ''
+                print(f"testmode: {entilde(dst)}/{file}{symlinktext}")
+            else:
+                try: unlink(f"{dst}/{file}") # always set our own perms
+                except FileNotFoundError: pass
+                copy(file, dst, follow_symlinks=False)
+        cntidx += 1
+
+    return counts
+
+
+def installrc(src, dst):
+
+    symlinks, targets = find_candidates(src, dst)
     count = 0
-    for file in find_candidates():
-        count += 1
-        if args.dryrun:
-            print(f"testmode: {dst}/{file}")
-            continue
-        try: unlink(f"{dst}/{file}") # always set our own perms
-        except FileNotFoundError: pass
-
-        copy(file, dst, follow_symlinks=False)
-
-    return count
-
-
-def installrc(dst):
-
-    symlinks, targets = find_candidates()
-    count = 0
-    src = getcwd()
 
     for link in symlinks:
-        count += 1
-        ref = targets[link]
-        reltarget = relpath(f"{src}/{ref}", start=realpath(dst))
-        linkpath = f"{dst}/{link}"
 
-        if args.dryrun:
-            print(f"testmode: {dst}/{link} -> {reltarget}")
-            continue
+        linkchain = targets[link]
+        linkcnt = len(linkchain)
 
-        try: unlink(linkpath)
-        except FileNotFoundError: pass
+        for i in range(linkcnt - 1):
+            linkto = linkchain[i+1]
+            linkfrom = linkchain[i]
+            dirfrom = dirname(linkfrom)
+            if dirfrom.removeprefix(dst):
+                if args.dryrun:
+                    print(f"testmode: {entilde(dirfrom)} [makedirs]")
+                else:
+                    try: makedirs(dirfrom, exist_ok=True)
+                    except: bomb(f"failed makedirs for '{dirfrom}'")
+            else:
+                dirfrom = dst
+            reltarget = relpath(linkto, start=dirfrom)
+            if args.dryrun:
+                print(f"testmode: {entilde(linkfrom)} -> {reltarget}")
+                continue
+            try: unlink(linkfrom)
+            except FileNotFoundError: pass
+            symlink(reltarget, linkfrom)
 
-        symlink(reltarget, linkpath)
+        count += linkcnt
 
     return count
 
+###
 
 def main():
 
@@ -213,6 +279,7 @@ def main():
     if not args.quiet:
         print_execution_stats(src, dst, instcnt)
 
+###
 
 if __name__ == "__main__":
 
