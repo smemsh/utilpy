@@ -93,7 +93,7 @@ def process_args():
         dst = dst + '/bin'
 
     if args.ask:
-        action = 'test' if args.dryrun else 'overwrite'
+        action = 'testmode install' if args.dryrun else 'overwrite'
         print(f"{action} in '{dst}/' with '{src}/*' (y/n)? ", end='')
         stdout.flush()
         yn = getchar(); print(yn)
@@ -122,8 +122,7 @@ def print_execution_stats(src, dst, cnt):
 
     if search(r'[^a-zA-Z0-9_/.+,:@-]', src + dst):
         src = f"\"{src}\""; dst = f"\"{dst}\""
-
-    prefix = 'test: ' if args.dryrun else ''
+    prefix = 'testmode: ' if args.dryrun else ''
     print(f"{prefix}installed {cnt}")
 
 
@@ -160,7 +159,7 @@ def installx(dst):
     for file in find_candidates():
         count += 1
         if args.dryrun:
-            print(f"test: {dst}/{file}")
+            print(f"testmode: {dst}/{file}")
             continue
         try: unlink(f"{dst}/{file}") # always set our own perms
         except FileNotFoundError: pass
