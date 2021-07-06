@@ -4,8 +4,9 @@
 #   output random 128-bit password from [[:alnum:]] ^ [0Ol1I]
 #
 # desc:
-#   - generates a 22 char password (~128 bits entropy)
+#   - generates a random password with specifiable entropy
 #   - chars: a-z, A-Z, 0-9, except: 0, O, l, 1, I (== 57 possible)
+#   - default 22 char password (~128 bits entropy using our charset)
 #   - uses python random.SystemRandom (on linux, os.urandom())
 #   - uses random.choice() to map into range of suitable characters
 #
@@ -22,8 +23,8 @@
 #   - https://en.wikipedia.org/wiki/Password_strength
 #
 # todo:
-#   - variable length if given (nchars)
-#   - specify length in terms of entropy bits
+#   - allow to specify length instead of computing by entropy
+#   - allow to specify character set
 #
 # scott@smemsh.net
 # http://smemsh.net/src/utilpy/
@@ -32,9 +33,9 @@
 ##############################################################################
 """
 print random password
+    arg: minimum amount of entropy (optional, default 128)
     chars: a-z, A-Z, 0-9; exclude: 0, O, l, 1, I; total: 57
-    length: 22 chars; entropy: ~128 bits
-    takes no arguments
+    length: calculated from entropy arg, or 22 chars for default
 """
 
 from sys import argv, stdout
@@ -45,9 +46,11 @@ from random import SystemRandom as Rng
 from string import ascii_letters as letters
 from string import digits
 
+from math import ceil, log as ln
+
 #
-PASSLEN = 22
 CHARSET = set(letters + digits) ^ set("0Ol1I")
+ENTROPY_DEFAULT = 128
 
 #
 def usagex():
@@ -65,15 +68,18 @@ def passgen(random, charset, length):
 
     return s
 
+
+def find_minlen(entropy):
+    return ceil(entropy / (ln(len(CHARSET)) / ln(2)))
+
 ###
 
-def main():
+def main(minentropy):
 
-    if (nargs != 0):
-        usagex()
+    passlen = find_minlen(minentropy)
 
     rng = Rng()
-    password = passgen(rng, CHARSET, PASSLEN)
+    password = passgen(rng, CHARSET, passlen)
 
     print(password, end='')
     if (stdout.isatty()):
@@ -98,6 +104,8 @@ if (__name__ == "__main__"):
 
     invname = basename(realpath(argv[0]))
     nargs = len(argv) - 1
+    if nargs > 1: usagex()
 
-    main()
+    main(int(argv[1]) if nargs else ENTROPY_DEFAULT)
+
 #
