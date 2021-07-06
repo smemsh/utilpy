@@ -84,17 +84,17 @@ def main():
 if (__name__ == "__main__"):
 
     try:
-        if (bool(environ['DEBUG'])):
-            debug = True
-            import pdb
+        if bool(environ['DEBUG']):
             from pprint import pprint as pp
-            pp('debug-mode-enabled')
-            pdb.set_trace()
+            debug = True
+            print('debug-mode-enabled', file=stderr)
         else:
             raise KeyError
 
     except KeyError:
         debug = False
+
+    if debug: breakpoint()
 
     invname = basename(realpath(argv[0]))
     nargs = len(argv) - 1
