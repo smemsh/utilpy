@@ -87,6 +87,12 @@ def main(minentropy):
 
 if (__name__ == "__main__"):
 
+    from sys import version_info as pyv
+    if pyv.major < 3 or pyv.major == 3 and pyv.minor < 7:
+        from os import EX_SOFTWARE as EXIT_FAILURE
+        print("minimum python 3.7", file=stderr)
+        exit(EXIT_FAILURE)
+
     try:
         if bool(environ['DEBUG']):
             from pprint import pprint as pp
