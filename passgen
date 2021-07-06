@@ -48,24 +48,23 @@ from string import digits
 
 from math import ceil, log as ln
 
-#
+###
+
 CHARSET = set(letters + digits) ^ set("0Ol1I")
 ENTROPY_DEFAULT = 128
 
-#
-def usagex():
+###
 
+def usagex():
     print("{}:".format(invname), __doc__.strip())
     quit()
 
 ###
 
 def passgen(random, charset, length):
-
     s = str()
     for _ in range(length):
         s += random.choice(list(charset))
-
     return s
 
 
@@ -85,7 +84,6 @@ def main(minentropy):
     if (stdout.isatty()):
         print()
 
-###
 
 if (__name__ == "__main__"):
 
