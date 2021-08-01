@@ -116,7 +116,7 @@ def check_sanity(src, dst):
 
     if not exists(dst):
         try: makedirs(dst)
-        except: bomb(f"dest '{dst}' dns or bad mkdir")
+        except: bomb(f"dest '{dst}' dne or bad mkdir")
 
     elif not isdir(dst):
         bomb(f"refusing overwrite of '{dst}' (not a directory)")
