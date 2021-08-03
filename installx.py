@@ -66,8 +66,8 @@ def process_args():
         options = list(("-%s --%s" % (flagchar, longopt)).split())
         parser.add_argument(*options, action='store_true', **kwargs)
 
-    def addarg(parser, varname, vardesc):
-        parser.add_argument(varname, nargs='?', metavar=vardesc)
+    def addarg(parser, varname, vardesc, **kwargs):
+        parser.add_argument(varname, nargs='?', metavar=vardesc, **kwargs)
 
     def getchar():
         fd = stdin.fileno()
