@@ -62,12 +62,12 @@ def process_args():
 
     global args
 
-    def addflag(parser, flagchar, longopt, **kwargs):
+    def addflag(p, flagchar, longopt, help=None, /, **kwargs):
         options = list(("-%s --%s" % (flagchar, longopt)).split())
-        parser.add_argument(*options, action='store_true', **kwargs)
+        p.add_argument(*options, action='store_true', help=help, **kwargs)
 
-    def addarg(parser, varname, vardesc, **kwargs):
-        parser.add_argument(varname, nargs='?', metavar=vardesc, **kwargs)
+    def addarg(p, vname, vdesc, help=None, /, **kwargs):
+        p.add_argument(vname, nargs='?', metavar=vdesc, help=help, **kwargs)
 
     def getchar():
         fd = stdin.fileno()
@@ -83,11 +83,11 @@ def process_args():
         allow_abbrev    = False,
         formatter_class = argparse.RawTextHelpFormatter,
     )
-    addflag (p, 'n', 'test', dest='dryrun')
-    addflag (p, 'q', 'quiet')
-    addflag (p, 'f', 'force')
-    addarg  (p, 'src', 'srcdir')
-    addarg  (p, 'dest', 'destdir')
+    addflag (p, 'n', 'test', "only show intended actions", dest='dryrun')
+    addflag (p, 'q', 'quiet', "no output for most actions")
+    addflag (p, 'f', 'force', "don't ask confirmation of source and dest")
+    addarg  (p, 'src', 'srcdir', "install from [cwd]")
+    addarg  (p, 'dest', 'destdir', f"install to [{defaultdest[invname]}]")
 
     args = p.parse_args(args)
 
