@@ -42,6 +42,13 @@ from os import (
 
 ###
 
+defaultdest = {
+    'installrc': getenv('HOME'),
+    'installx': getenv('HOME') + '/bin',
+}
+
+###
+
 def err(*args, **kwargs):
     print(*args, file=stderr, **kwargs)
 
@@ -92,12 +99,9 @@ def process_args():
         bomb("the force is not with you")
 
     src = args.src if args.src else getcwd()
-    dst = args.dest if args.dest else getenv('HOME')
+    dst = defaultdest[invname] if not args.dest else args.dest
     src = src[:-1] if src[-1] == '/' else src
     dst = dst[:-1] if dst[-1] == '/' else dst
-
-    if invname == 'installx' and not args.dest:
-        dst = dst + '/bin'
 
     if args.ask:
         action = 'testmode install' if args.dryrun else 'overwrite'
