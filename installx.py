@@ -100,8 +100,7 @@ def process_args():
 
     src = args.src if args.src else getcwd()
     dst = defaultdest[invname] if not args.dest else args.dest
-    src = src[:-1] if src[-1] == '/' else src
-    dst = dst[:-1] if dst[-1] == '/' else dst
+    for d in ['src', 'dst']: exec(f"{d} = {d}.rstrip('/')")
 
     if args.ask:
         action = 'testmode install' if args.dryrun else 'overwrite'
