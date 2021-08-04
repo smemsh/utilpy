@@ -307,7 +307,7 @@ def installrc(src, dst):
             except FileNotFoundError: pass
             symlink(reltarget, linkfrom)
 
-        count += linkcnt
+        count += linkcnt - 1
 
     return count
 
