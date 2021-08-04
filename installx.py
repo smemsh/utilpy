@@ -146,8 +146,10 @@ def print_execution_stats(src, dst, cnt):
 
     if search(r'[^a-zA-Z0-9_/.+,:@-]', src + dst):
         src = f"\"{src}\""; dst = f"\"{dst}\""
+
     prefix = 'testmode: ' if args.dryrun else ''
-    print(f"{prefix}{entilde(src)} -> {entilde(dst)}")
+    if not args.dryrun:
+        print(f"{prefix}{entilde(src)} -> {entilde(dst)}")
     print(f"{prefix}installed {cnt}")
 
 
