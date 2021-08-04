@@ -23,6 +23,8 @@ from shutil import copy
 from sys import argv, stdin, stdout, stderr, exit
 from tty import setraw
 from re import search
+from stat import S_IFLNK
+from hashlib import sha256
 
 from os.path import (
     join, expanduser,
@@ -31,6 +33,7 @@ from os.path import (
     relpath, realpath, abspath, normpath, commonpath,
 )
 from os import (
+    stat, lstat,
     getcwd, chdir,
     environ, getenv,
     makedirs, scandir,
@@ -86,6 +89,7 @@ def process_args():
     addflag (p, 'n', 'test', "only show intended actions", dest='dryrun')
     addflag (p, 'q', 'quiet', "no output for most actions")
     addflag (p, 'f', 'force', "don't ask confirmation of source and dest")
+    addflag (p, 'u', 'unchanged', "overwrite unchanged files", dest='nocheck')
     addarg  (p, 'src', 'srcdir', "install from [cwd]")
     addarg  (p, 'dest', 'destdir', f"install to [{defaultdest[invname]}]")
 
@@ -132,9 +136,13 @@ def print_execution_stats(src, dst, cnt):
 
     src = f"{src}/"
     dst = f"{dst}/"
-    cnt = f"{cnt[0]} scripts, {cnt[1]} exelinks" \
-          if type(cnt) == list \
-          else f"{cnt} rclinks"
+    if type(cnt) == list:
+        cnt = \
+            f"{cnt[0]} scripts, " \
+            f"{cnt[1]} exelinks, " \
+            f"{cnt[2]} skipped"
+    else:
+        cnt = f"{cnt} rclinks"
 
     if search(r'[^a-zA-Z0-9_/.+,:@-]', src + dst):
         src = f"\"{src}\""; dst = f"\"{dst}\""
@@ -197,6 +205,34 @@ def find_candidates(src, dst):
 
     return locals()[invname]
 
+
+def files_differ(file1, file2):
+
+    def filetype(file):
+        try:
+            st = lstat(file)
+            return st.st_mode >> 9
+        except FileNotFoundError:
+            return 0
+
+    def gethash(file):
+        with open(file, "rb") as f:
+            return sha256(f.read()).hexdigest()
+
+    ft1 = filetype(file1)
+    ft2 = filetype(file2)
+
+    if ft1 != ft2:
+        return True
+
+    if ft1 == S_IFLNK >> 9:
+        if readlink(file1) == readlink(file2): return False
+        else: return True
+
+    if gethash(file1) == gethash(file2): return False
+    else: return True
+
+
 ###
 
 def entilde(path):
@@ -208,25 +244,34 @@ def entilde(path):
 
 def installx(src, dst):
 
-    counts = [0, 0] # track scripts, exelinks but return one value
+    # track scripts, exelinks, skips but return one value
+    counts = [0, 0, 0]
     cntidx = 0
+    skipped = 0
 
     (scripts, exelinks), targets = find_candidates(src, dst)
     for lst in [scripts, exelinks]:
         for file in lst:
-            counts[cntidx] += 1
+            destfile = f"{dst}/{file}"
+            same = not files_differ(file, destfile)
+            skipped += 0 if not same else 1
+            counts[cntidx] += 0 if same else 1
             if args.dryrun:
-                symlinktext = \
-                    f"\x20-> {basename(targets[file][1])}" \
-                    if targets.get(file) \
-                    else ''
-                print(f"testmode: {entilde(dst)}/{file}{symlinktext}")
+                if targets.get(file):
+                    linktext = f" -> {basename(targets[file][1])}"
+                else:
+                    linktext = ''
+                print(
+                    f"testmode: {entilde(dst)}/{file}{linktext}" \
+                    f"{' (skipped)' if same else ''}")
             else:
-                try: unlink(f"{dst}/{file}") # always set our own perms
+                if same and not args.nocheck: continue
+                try: unlink(destfile) # always set our own perms
                 except FileNotFoundError: pass
                 copy(file, dst, follow_symlinks=False)
         cntidx += 1
 
+    counts[2] = skipped
     return counts
 
 
@@ -278,10 +323,10 @@ def main():
     except (KeyError, TypeError):
         bomb(f"unimplemented command '{invname}'")
 
-    instcnt = subprogram(src, dst)
+    counts = subprogram(src, dst)
 
     if not args.quiet:
-        print_execution_stats(src, dst, instcnt)
+        print_execution_stats(src, dst, counts)
 
 ###
 
