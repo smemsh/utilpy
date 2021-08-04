@@ -315,6 +315,8 @@ def installrc(src, dst):
 
 def main():
 
+    if debug: breakpoint()
+
     src, dst = process_args()
     check_sanity(src, dst)
 
@@ -352,8 +354,6 @@ if __name__ == "__main__":
 
     except KeyError:
         debug = False
-
-    if debug: breakpoint()
 
     try: main()
     except BdbQuit: bomb("debug-stop")
