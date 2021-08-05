@@ -136,13 +136,15 @@ def print_execution_stats(src, dst, cnt):
 
     src = f"{src}/"
     dst = f"{dst}/"
-    if type(cnt) == list:
+    if len(cnt) == 3:
         cnt = \
             f"{cnt[0]} scripts, " \
             f"{cnt[1]} exelinks, " \
             f"{cnt[2]} skipped"
     else:
-        cnt = f"{cnt} rclinks"
+        cnt = \
+            f"{cnt[0]} rclinks, " \
+            f"{cnt[1]} skipped"
 
     if search(r'[^a-zA-Z0-9_/.+,:@-]', src + dst):
         src = f"\"{src}\""; dst = f"\"{dst}\""
@@ -284,7 +286,8 @@ def installx(src, dst):
 def installrc(src, dst):
 
     symlinks, targets = find_candidates(src, dst)
-    count = 0
+    linked = 0
+    skipped = 0
 
     for link in symlinks:
 
@@ -292,6 +295,7 @@ def installrc(src, dst):
         linkcnt = len(linkchain)
 
         for i in range(linkcnt - 1):
+
             linkto = linkchain[i+1]
             linkfrom = linkchain[i]
             dirfrom = dirname(linkfrom)
@@ -303,17 +307,26 @@ def installrc(src, dst):
                     except: bomb(f"failed makedirs for '{dirfrom}'")
             else:
                 dirfrom = dst
+
             reltarget = relpath(linkto, start=dirfrom)
+
+            try: same = not abspath(readlink(linkfrom)) == linkto
+            except FileNotFoundError: same = False
+            if same: skipped += 1
+            else: linked += 1
+
             if args.dryrun:
-                print(f"testmode: {entilde(linkfrom)} -> {reltarget}")
-                continue
-            try: unlink(linkfrom)
-            except FileNotFoundError: pass
-            symlink(reltarget, linkfrom)
+                print(
+                    f"testmode: {entilde(linkfrom)} -> {reltarget}" \
+                    f"{' (skipped)' if same else ''}")
+            else:
+                if same and not args.nocheck:
+                    continue
+                try: unlink(linkfrom)
+                except FileNotFoundError: pass
+                symlink(reltarget, linkfrom)
 
-        count += linkcnt - 1
-
-    return count
+    return [linked, skipped]
 
 ###
 
