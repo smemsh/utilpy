@@ -246,8 +246,7 @@ def entilde(path):
 
 def installx(src, dst):
 
-    # track scripts, exelinks, skips but return one value
-    counts = [0, 0, 0]
+    counts = [0, 0, 0] # scripts, exelinks, skips
     cntidx = 0
     skipped = 0
 
