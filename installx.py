@@ -252,11 +252,14 @@ def installx(src, dst):
 
     (scripts, exelinks), targets = find_candidates(src, dst)
     for lst in [scripts, exelinks]:
+
         for file in lst:
+
             destfile = f"{dst}/{file}"
             same = not files_differ(file, destfile)
-            skipped += 0 if not same else 1
-            counts[cntidx] += 0 if same else 1
+            if same: skipped +=1
+            else: counts[cntidx] += 1
+
             if args.dryrun:
                 if targets.get(file):
                     linktext = f" -> {basename(targets[file][1])}"
@@ -266,10 +269,12 @@ def installx(src, dst):
                     f"testmode: {entilde(dst)}/{file}{linktext}" \
                     f"{' (skipped)' if same else ''}")
             else:
-                if same and not args.nocheck: continue
+                if same and not args.nocheck:
+                    continue
                 try: unlink(destfile) # always set our own perms
                 except FileNotFoundError: pass
                 copy(file, dst, follow_symlinks=False)
+
         cntidx += 1
 
     counts[2] = skipped
