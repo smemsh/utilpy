@@ -310,7 +310,7 @@ def installrc(src, dst):
 
             reltarget = relpath(linkto, start=dirfrom)
 
-            try: same = not abspath(readlink(linkfrom)) == linkto
+            try: same = normpath(join(dirfrom, readlink(linkfrom))) == linkto
             except FileNotFoundError: same = False
             if same: skipped += 1
             else: linked += 1
