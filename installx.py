@@ -311,7 +311,7 @@ def installrc(src, dst):
             reltarget = relpath(linkto, start=dirfrom)
 
             try: same = normpath(join(dirfrom, readlink(linkfrom))) == linkto
-            except FileNotFoundError: same = False
+            except (FileNotFoundError, OSError): same = False
             if same: skipped += 1
             else: linked += 1
 
