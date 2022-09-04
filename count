@@ -74,7 +74,7 @@ def main():
         for file in files:
 
             try:
-                with open(file, "rt") as f:
+                with open(file, "rb") as f:
                     count = countlines(f)
                     print('{}: {}'.format(file, count))
 
