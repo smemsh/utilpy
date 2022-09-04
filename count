@@ -5,7 +5,7 @@
 #
 # desc:
 #   - equivalent to wc -l (different output format if files given)
-#   - 10x slower than C version (wc -l) in measurements
+#   - 5x slower than C version (wc -l) in measurements, python-3.9.5
 #
 # status:
 #   - experiment to determine python's speed with simple IO loop + counter
