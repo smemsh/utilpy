@@ -56,20 +56,16 @@ def main():
         for arg in args:
 
             if (no_more_options):
-                files.append(arg)
-                continue
+                files.append(arg); continue
 
             elif (arg == '--'):
-                no_more_options = True
-                continue
+                no_more_options = True; continue
 
-            elif (arg == '-h' or
-                  arg == '--help'):
+            elif (arg == '-h' or arg == '--help'):
                 usagex()
 
             elif (arg[0] == '-'):
-                print("{}: opterr".format(invname))
-                quit()
+                print("{}: opterr".format(invname)); quit()
 
             else:
                 files.append(arg)
