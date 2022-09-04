@@ -49,7 +49,7 @@ def main():
     no_more_options = False
 
     if (nargs == 0):
-        print(countlines(stdin))
+        print(countlines(stdin.buffer))
 
     else:
         files = []
