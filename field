@@ -1,0 +1,236 @@
+#!/usr/bin/env python3
+"""
+field
+  select and output fields from each record
+
+desc:
+  - prints specified ranges of fields from the input
+  - input and output field delimiter can both be specified
+  - provide records on the standard input
+
+usage:
+  - 1-arg: field <rangelist>
+  - 2-arg: field <indelim> <rangelist>
+  - 3-arg: field <indelim> <outdelim> <rangelist>
+  - where unspecified, delim defaults to chars in $IFS
+  - records are split on newlines only so far
+
+range:
+  - specifier is a comma separated list of ranges
+  - ranges are either single numbers or first-last sequences
+  - unspecified Y in X-Y will default to highest Y in the input
+  - N: just field number N (1-based)
+  - N-M: field numbers in the range N through M
+  - N-: field numbers starting at N through the last
+  - -N: field numbers starting at 1 through N
+  - eg: "1-3,4,8,8,8,2,2,7-10,12-" -> "1 2 3 4 8 8 8 2 2 7 8 9 10 12 ..."
+
+todo:
+  - read from files given as additional arguments
+  - /R/: fields matching regex R;
+  - /R/-/S/: starting with /R/ and ending with /S/
+  - specify record delimiter
+  - specify record selection criteria (pattern)
+  - field reformatting, eg wrapping, fit in column or on page
+  - args like -r record-regex -f range1,range2 -F format1,format2
+  - args like -g columnate_group
+  - different behaviors for range overlaps (set union, addition)
+  - way to disinclude fields ("all fields except...")
+  - multiple delimiters, maybe a -i and -d possible for every -f
+  - multiple delimiters, as in multiple patterns will serve as one
+  - negative ranges (relative to end)
+  - specify od but not id (maybe support -i and -d or -d and -D)
+  - also allow specifying a record separator
+  - implement a "record" in terms of "field?"
+  - allow to spit out fields backwards (tac for fields)
+"""
+__url__     = 'https://github.com/src/utilpy/'
+__author__  = 'Scott Mcdermott <scott@smemsh.net>'
+__license__ = 'GPL-2.0'
+
+import argparse
+import sys
+import re
+
+from os import getenv, EX_OK as EXIT_SUCCESS, EX_SOFTWARE as EXIT_FAILURE
+from os.path import basename, dirname, isdir, exists
+from select import select
+from subprocess import check_output
+
+###
+
+def err(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+def bomb(*args, **kwargs):
+    err(*args, **kwargs)
+    sys.exit(EXIT_FAILURE)
+
+def dprint(*args, **kwargs):
+    if not debug: return
+    err('debug:', *args, **kwargs)
+
+def dprintvar(name, vars):
+    if not debug: return
+    err(f"debug: {name}")
+    pp(vars[name])
+
+def exe(cmd):
+    return check_output(cmd.split()).splitlines()
+
+###
+
+def process_args(args):
+
+    global ifs, ofs
+
+    n = len(args)
+    if n == 1: fields = args[0]
+    elif n == 2: ifs = args[0]; fields = args[1]
+    elif n == 3: ifs = args[0]; ofs = args[1]; fields = args[2]
+    else: bomb("bad args")
+
+    return fields
+
+
+class FieldRange:
+    def __init__(self, start='1', end='0'):
+        self.start = int(start) or 1
+        self.end = int(end)
+
+def parse_fields(rangelist):
+
+    ranges = []
+    for fieldrange in rangelist.split(','):
+
+        m = re.match(r"\d+$", fieldrange)
+        if m:
+            n = m.group(0)
+            fr = FieldRange(start=n, end=n)
+            ranges += [fr]
+            continue
+
+        m = re.match(r"(?P<start>\d*)-(?P<end>\d*)$", fieldrange)
+        if m:
+            kw = dict(start=m.group('start'), end=m.group('end'))
+            fr = FieldRange(**{k: v for k, v in kw.items() if v != ''})
+            if fr.start < 1: bomb("start field must be positive")
+            if fr.end and fr.start > fr.end: bomb("start cannot exceed end")
+            ranges += [fr]
+            continue
+
+        else: bomb(f"bad field range: {fieldrange}")
+
+    return ranges
+
+
+def field(args):
+    rangelist = process_args(args)
+    ranges = parse_fields(rangelist)
+    records = re.split(irs, inbuf, re.MULTILINE | re.DOTALL)
+    for n in [0, -1]:
+        if not records[n]: records.pop(n)
+    for record in records:
+        fields = re.split(ifs, record)
+        n = len(fields)
+        indices = []
+        for r in ranges:
+            start = r.start
+            end = r.end or n
+            indices += list(range(start - 1, end))
+        print(ofs.join([fields[i] for i in indices]), end=ors)
+
+###
+
+def main(args):
+
+    if debug == 1:
+        breakpoint()
+
+    try: subprogram = globals()[invname]
+    except (KeyError, TypeError):
+        bomb(f"unimplemented command '{invname}'")
+
+    return subprogram(args)
+
+###
+
+if __name__ == "__main__":
+
+    from sys import hexversion
+    if hexversion < 0x03090000:
+        bomb("minimum python 3.9")
+
+    # save stdin, pdb needs stdio fds itself
+    # TODO this is problem with large input files
+    if select([sys.stdin], [], [], 0)[0]:
+        inbuf = sys.stdin.read()
+        try: sys.stdin = open('/dev/tty')
+        except: pass # no ctty, but then pdb would not be in use
+    else:
+        bomb("must supply input on stdin")
+
+    from bdb import BdbQuit
+    debug = int(getenv('DEBUG') or 0)
+    if debug:
+        from pprint import pp
+        err('debug: enabled')
+
+    invname = basename(sys.argv[0])
+    args = sys.argv[1:]
+
+    ifs = r"[\x20\t]"; ofs = "\x20"
+    irs = "\n"; ors = "\n"
+
+    try: main(args)
+    except BdbQuit: bomb("debug: stop")
+
+###############################################################################
+
+#
+#source ~/lib/sh/include
+#require range_to_list_awk
+#require progname
+#require printf_isatty
+#
+#do_field ()
+#{
+#	#printf_isatty
+#	printf "%s\n---" "$(gawk \
+#		--re-interval \
+#		--assign rangelist=$rangelist \
+#		--assign FS="$indelim" \
+#		--file ~/bin/$(progname).awk \
+#	)"
+#}
+#
+#make_delimiters_from_args ()
+#{
+#	case $# in
+#	(3) indelim="$1" outdelim="$2" rangelist="$3" ;;
+#	(2) indelim="$1" outdelim=' '  rangelist="$2" ;;
+#	(1) indelim=' '  outdelim=' '  rangelist="$1" ;;
+#	(*) return 10;;
+#	esac
+#
+#	# we only handle single-character delimiters right now
+#	#
+#	((${#indelim} == 1)) || return 20
+#	((${#outdelim} == 1)) || return 30
+#
+#	rangelist=`range_to_list_awk $rangelist`
+#}
+#
+###############################################################################
+#
+#main ()
+#{
+#	declare -g rangelist indelim outdelim
+#	make_delimiters_from_args "$@" || return
+#
+#	outdelim='FOOOOOO'
+#
+#	do_field | head -c -1 | tr '\0' "$outdelim"
+#}
+#
+#main "$@"
