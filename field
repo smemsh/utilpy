@@ -151,7 +151,14 @@ def main(args):
     except (KeyError, TypeError):
         bomb(f"unimplemented command '{invname}'")
 
-    return subprogram(args)
+    try: return subprogram(args)
+    finally: # https://github.com/python/cpython/issues/55589
+        try: sys.stdout.flush()
+        finally:
+            try: sys.stdout.close()
+            finally:
+                try: sys.stderr.flush()
+                finally: sys.stderr.close()
 
 ###
 
