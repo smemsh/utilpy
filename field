@@ -170,7 +170,7 @@ if __name__ == "__main__":
 
     # save stdin, pdb needs stdio fds itself
     # TODO this is problem with large input files
-    if select([sys.stdin], [], [], 0)[0]:
+    if select([sys.stdin], [], [], None)[0]:
         inbuf = sys.stdin.read()
         try: sys.stdin = open('/dev/tty')
         except: pass # no ctty, but then pdb would not be in use
