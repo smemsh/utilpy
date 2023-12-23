@@ -132,6 +132,8 @@ def field(args):
         if not records[n]: records.pop(n)
     for record in records:
         fields = re.split(ifs, record)
+        # https://stackoverflow.com/questions/2197451
+        fields = [f for f in fields if f]
         n = len(fields)
         indices = []
         for r in ranges:
