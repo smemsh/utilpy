@@ -154,7 +154,7 @@ def main(args):
         bomb(f"unimplemented command '{invname}'")
 
     try: return subprogram(args)
-    finally: # https://github.com/python/cpython/issues/55589
+    finally: # cpython bug 55589
         try: sys.stdout.flush()
         finally:
             try: sys.stdout.close()
