@@ -48,23 +48,24 @@ __author__  = 'Scott Mcdermott <scott@smemsh.net>'
 __license__ = 'GPL-2.0'
 
 import argparse
-import sys
 import re
 
 from os import getenv, EX_OK as EXIT_SUCCESS, EX_SOFTWARE as EXIT_FAILURE
 from os import close as osclose
 from os.path import basename, dirname, isdir, exists
+
+from sys import argv, stdin, stdout, stderr, exit
 from select import select
 from subprocess import check_output
 
 ###
 
 def err(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
+    print(*args, file=stderr, **kwargs)
 
 def bomb(*args, **kwargs):
     err(*args, **kwargs)
-    sys.exit(EXIT_FAILURE)
+    exit(EXIT_FAILURE)
 
 def dprint(*args, **kwargs):
     if not debug: return
@@ -155,12 +156,12 @@ def main(args):
 
     try: return subprogram(args)
     finally: # cpython bug 55589
-        try: sys.stdout.flush()
+        try: stdout.flush()
         finally:
-            try: sys.stdout.close()
+            try: stdout.close()
             finally:
-                try: sys.stderr.flush()
-                finally: sys.stderr.close()
+                try: stderr.flush()
+                finally: stderr.close()
 
 ###
 
@@ -171,10 +172,10 @@ if __name__ == "__main__":
         bomb("minimum python 3.9")
 
     # save stdin, pdb needs stdio fds itself
-    if select([sys.stdin], [], [], None)[0]:
-        inbuf = sys.stdin.read() # todo: problematic with large inputs
-        osclose(sys.stdin.fileno()) # cpython bug 73582
-        try: sys.stdin = open('/dev/tty')
+    if select([stdin], [], [], None)[0]:
+        inbuf = stdin.read() # todo: problematic with large inputs
+        osclose(stdin.fileno()) # cpython bug 73582
+        try: stdin = open('/dev/tty')
         except: pass # no ctty, but then pdb would not be in use
     else:
         bomb("must supply input on stdin")
@@ -185,8 +186,8 @@ if __name__ == "__main__":
         from pprint import pp
         err('debug: enabled')
 
-    invname = basename(sys.argv[0])
-    args = sys.argv[1:]
+    invname = basename(argv[0])
+    args = argv[1:]
 
     ifs = r"[\x20\t]"; ofs = "\x20"
     irs = "\n"; ors = "\n"
