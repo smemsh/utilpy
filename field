@@ -52,11 +52,10 @@ import re
 
 from os import getenv, EX_OK as EXIT_SUCCESS, EX_SOFTWARE as EXIT_FAILURE
 from os import close as osclose
-from os.path import basename, dirname, isdir, exists
+from os.path import basename
 
 from sys import argv, stdin, stdout, stderr, exit
 from select import select
-from subprocess import check_output
 
 ###
 
@@ -75,9 +74,6 @@ def dprintvar(name, vars):
     if not debug: return
     err(f"debug: {name}")
     pp(vars[name])
-
-def exe(cmd):
-    return check_output(cmd.split()).splitlines()
 
 ###
 
