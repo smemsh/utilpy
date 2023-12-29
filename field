@@ -53,6 +53,7 @@ import sys
 import re
 
 from os import getenv, EX_OK as EXIT_SUCCESS, EX_SOFTWARE as EXIT_FAILURE
+from os import close as osclose
 from os.path import basename, dirname, isdir, exists
 from select import select
 from subprocess import check_output
@@ -171,9 +172,9 @@ if __name__ == "__main__":
         bomb("minimum python 3.9")
 
     # save stdin, pdb needs stdio fds itself
-    # TODO this is problem with large input files
     if select([sys.stdin], [], [], None)[0]:
-        inbuf = sys.stdin.read()
+        inbuf = sys.stdin.read() # todo: problematic with large inputs
+        osclose(sys.stdin.fileno()) # cpython bug 73582
         try: sys.stdin = open('/dev/tty')
         except: pass # no ctty, but then pdb would not be in use
     else:
