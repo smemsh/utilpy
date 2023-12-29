@@ -40,7 +40,6 @@ todo:
   - multiple delimiters, as in multiple patterns will serve as one
   - negative ranges (relative to end)
   - specify od but not id (maybe support -i and -d or -d and -D)
-  - also allow specifying a record separator
   - implement a "record" in terms of "field?"
   - allow to spit out fields backwards (tac for fields)
 """
