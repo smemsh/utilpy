@@ -7,7 +7,7 @@ args:
   - 1-arg: field <rangelist>
   - 2-arg: field <indelim> <rangelist>
   - 3-arg: field <indelim> <outdelim> <rangelist>
-  - where unspecified, delim defaults to chars in $IFS
+  - where unspecified, delim defaults to whitespace
   - if supplied, indelim is a fixed string, unless -r/--regex
   - records are split on newlines only so far
 
