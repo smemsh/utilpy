@@ -25,6 +25,8 @@ range:
   - -N: field numbers starting at 1 through N
   - eg: "1-3,4,8,8,8,2,2,7-10,12-" -> "1 2 3 4 8 8 8 2 2 7 8 9 10 12 ..."
 
+"""
+"""
 todo:
   - read from files given as additional arguments
   - /R/: fields matching regex R;
@@ -43,6 +45,7 @@ todo:
   - implement a "record" in terms of "field?"
   - allow to spit out fields backwards (tac for fields)
 """
+
 __url__     = 'https://github.com/src/utilpy/'
 __author__  = 'Scott Mcdermott <scott@smemsh.net>'
 __license__ = 'GPL-2.0'
