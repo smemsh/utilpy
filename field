@@ -225,7 +225,7 @@ if __name__ == "__main__":
     invname = basename(argv[0])
     args = argv[1:]
 
-    ifs = r"[\x20\t]"; ofs = "\x20"
+    ifs = r"[\x20\t\n]"; ofs = "\x20"
     irs = "\n"; ors = "\n"
 
     try: main()
