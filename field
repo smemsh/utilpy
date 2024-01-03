@@ -1,21 +1,17 @@
 #!/usr/bin/env python3
 """
-field
-  select and output fields from each record
+field [options] [args]
+  select and output fields from each record from stdin
 
-desc:
-  - prints specified ranges of fields from the input
-  - input and output field delimiter can both be specified
-  - provide records on the standard input
-
-usage:
+args:
   - 1-arg: field <rangelist>
   - 2-arg: field <indelim> <rangelist>
   - 3-arg: field <indelim> <outdelim> <rangelist>
   - where unspecified, delim defaults to chars in $IFS
+  - if supplied, indelim is a fixed string, unless -r/--regex
   - records are split on newlines only so far
 
-range:
+rangelist:
   - specifier is a comma separated list of ranges
   - ranges are either single numbers or first-last sequences
   - unspecified Y in X-Y will default to highest Y in the input
@@ -83,15 +79,52 @@ def dprintvar(name, vars):
 
 ###
 
-def process_args(args):
+def process_args():
 
     global ifs, ofs
+    global args
 
-    n = len(args)
-    if n == 1: fields = args[0]
-    elif n == 2: ifs = args[0]; fields = args[1]
-    elif n == 3: ifs = args[0]; ofs = args[1]; fields = args[2]
-    else: bomb("bad args")
+    # whether field separators are fixed patterns or regexes
+    fixed = False
+
+    def addopt(p, flagchar, longopt, help=None, /, **kwargs):
+        options = list(("-%s --%s" % (flagchar, longopt)).split())
+        p.add_argument(*options, help=help, **kwargs)
+
+    def addflag(*args, **kwargs):
+        addopt(*args, action='store_true', **kwargs)
+
+    # not clear why the interface gives a prefix arg and defaults it, but
+    # doesn't allow it to be passed in from anywhere, so we have to override
+    #
+    class RawTextHelpFormatterEmptyUsageLine(argparse.RawTextHelpFormatter):
+        def add_usage(self, usage, actions, groups, prefix=None):
+            if prefix is None:
+                prefix = ''
+            return super(RawTextHelpFormatterEmptyUsageLine, self) \
+                .add_usage(usage, actions, groups, prefix)
+
+    p = argparse.ArgumentParser(
+        prog            = invname,
+        description     = __doc__.strip(),
+        allow_abbrev    = False,
+        formatter_class = RawTextHelpFormatterEmptyUsageLine,
+        usage           = "",
+    )
+
+    addflag (p, 'r', 'regex', "ifs/ofs are regular expressions")
+
+    args, left = p.parse_known_args(args)
+
+    n = len(left)
+    if n == 1: fields = left[0]
+    else:
+        if not args.regex: fixed = True
+        if n == 2: ifs = left[0]; fields = left[1]
+        elif n == 3: ifs = left[0]; ofs = left[1]; fields = left[2]
+        else: bomb("bad args")
+
+    if fixed: ifs = re.escape(ifs)
 
     return fields
 
@@ -127,8 +160,7 @@ def parse_fields(rangelist):
     return ranges
 
 
-def field(args):
-    rangelist = process_args(args)
+def field(rangelist):
     ranges = parse_fields(rangelist)
     records = re.split(irs, inbuf, re.MULTILINE | re.DOTALL)
     for n in [0, -1]:
@@ -147,16 +179,18 @@ def field(args):
 
 ###
 
-def main(args):
+def main():
 
     if debug == 1:
         breakpoint()
+
+    rangelist = process_args()
 
     try: subprogram = globals()[invname]
     except (KeyError, TypeError):
         bomb(f"unimplemented command '{invname}'")
 
-    try: return subprogram(args)
+    try: return subprogram(rangelist)
     finally: # cpython bug 55589
         try: stdout.flush()
         finally:
@@ -194,5 +228,5 @@ if __name__ == "__main__":
     ifs = r"[\x20\t]"; ofs = "\x20"
     irs = "\n"; ors = "\n"
 
-    try: main(args)
+    try: main()
     except BdbQuit: bomb("debug: stop")
