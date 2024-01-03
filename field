@@ -7,8 +7,8 @@ args:
   - 1-arg: field <rangelist>
   - 2-arg: field <indelim> <rangelist>
   - 3-arg: field <indelim> <outdelim> <rangelist>
-  - where unspecified, delim defaults to whitespace
   - if supplied, indelim is a fixed string, unless -r/--regex
+  - indelim defaults to any char in $IFS, or the regex [\\x20\\t\\n]
   - records are split on newlines only so far
 
 rangelist:
@@ -225,7 +225,7 @@ if __name__ == "__main__":
     invname = basename(argv[0])
     args = argv[1:]
 
-    ifs = r"[\x20\t\n]"; ofs = "\x20"
+    ifs = '[' + getenv('IFS', r'\x20\t\n') + ']'; ofs = "\x20"
     irs = "\n"; ors = "\n"
 
     try: main()
