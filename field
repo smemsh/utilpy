@@ -82,11 +82,16 @@ from os.path import basename
 ###
 
 def err(*args, **kwargs):
-    print(*args, file=stderr, **kwargs)
+    print(f"{invname}:", *args, file=stderr, **kwargs)
 
 def bomb(*args, **kwargs):
     err(*args, **kwargs)
     exit(EXIT_FAILURE)
+
+def usagex(*args, **kwargs):
+    argparser.print_help(file=stderr)
+    print(file=stderr)
+    bomb(*args, **kwargs)
 
 def dprint(*args, **kwargs):
     if not debug: return
@@ -136,7 +141,7 @@ def process_args():
         if not args.regex: fixed = True
         if n == 2: ifs = left[0]; fields = left[1]
         elif n == 3: ifs = left[0]; ofs = left[1]; fields = left[2]
-        else: bomb("bad args")
+        else: usagex("bad args")
 
     if fixed: ifs = re.escape(ifs)
 
@@ -242,8 +247,7 @@ if __name__ == "__main__":
         try: stdin = open('/dev/tty')
         except: pass # no ctty, but then pdb would not be in use
     else:
-        argparser.print_help(file=stderr)
-        bomb("\n" "must supply input on stdin")
+        usagex("must supply input on stdin")
 
     from bdb import BdbQuit
     debug = int(getenv('DEBUG') or 0)
