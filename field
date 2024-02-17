@@ -79,10 +79,22 @@ def dprintvar(name, vars):
 
 ###
 
+# not clear why the interface gives a prefix arg and defaults it, but
+# doesn't allow it to be passed in from anywhere, so we have to override
+#
+class RawTextHelpFormatterEmptyUsageLine(argparse.RawTextHelpFormatter):
+    def add_usage(self, usage, actions, groups, prefix=None):
+        if prefix is None:
+            prefix = ''
+        return super(RawTextHelpFormatterEmptyUsageLine, self) \
+            .add_usage(usage, actions, groups, prefix)
+
 def process_args():
 
     global ifs, ofs
     global args
+    global argparser
+    p = argparser
 
     # whether field separators are fixed patterns or regexes
     fixed = False
@@ -93,24 +105,6 @@ def process_args():
 
     def addflag(*args, **kwargs):
         addopt(*args, action='store_true', **kwargs)
-
-    # not clear why the interface gives a prefix arg and defaults it, but
-    # doesn't allow it to be passed in from anywhere, so we have to override
-    #
-    class RawTextHelpFormatterEmptyUsageLine(argparse.RawTextHelpFormatter):
-        def add_usage(self, usage, actions, groups, prefix=None):
-            if prefix is None:
-                prefix = ''
-            return super(RawTextHelpFormatterEmptyUsageLine, self) \
-                .add_usage(usage, actions, groups, prefix)
-
-    p = argparse.ArgumentParser(
-        prog            = invname,
-        description     = __doc__.strip(),
-        allow_abbrev    = False,
-        formatter_class = RawTextHelpFormatterEmptyUsageLine,
-        usage           = "",
-    )
 
     addflag (p, 'r', 'regex', "ifs/ofs are regular expressions")
 
@@ -207,6 +201,16 @@ if __name__ == "__main__":
     if hexversion < 0x03090000:
         bomb("minimum python 3.9")
 
+    args = argv[1:]
+    invname = basename(argv[0])
+    argparser = argparse.ArgumentParser(
+        prog            = invname,
+        description     = __doc__.strip(),
+        allow_abbrev    = False,
+        formatter_class = RawTextHelpFormatterEmptyUsageLine,
+        usage           = "",
+    )
+
     # save stdin, pdb needs stdio fds itself
     if select([stdin], [], [], None)[0]:
         inbuf = stdin.read() # todo: problematic with large inputs
@@ -221,9 +225,6 @@ if __name__ == "__main__":
     if debug:
         from pprint import pp
         err('debug: enabled')
-
-    invname = basename(argv[0])
-    args = argv[1:]
 
     ifs = '[' + getenv('IFS', r'\x20\t\n') + ']'; ofs = "\x20"
     irs = "\n"; ors = "\n"
