@@ -15,11 +15,19 @@ rangelist:
   - specifier is a comma separated list of ranges
   - ranges are either single numbers or first-last sequences
   - unspecified Y in X-Y will default to highest Y in the input
-  - N: just field number N (1-based)
-  - N-M: field numbers in the range N through M
-  - N-: field numbers starting at N through the last
-  - -N: field numbers starting at 1 through N
+  - if first field in range greater than than last, print reversed
+  - if any specified fields do not exist in the record, skip them
   - eg: "1-3,4,8,8,8,2,2,7-10,12-" -> "1 2 3 4 8 8 8 2 2 7 8 9 10 12 ..."
+
+range:
+      N: just field number N (1 is first)
+     -N: just field Nth from the end (-1 is last)
+    N-M: fields N through M (M > N)
+    N-M: fields M through N, backwards (N > M)
+     N-: fields N through the end
+    -N-: fields from Nth from the end, through the end
+   N--M: fields N through Mth from end
+  -N--M: fields Nth from the end through Mth from the end
 
 """
 """
@@ -36,10 +44,8 @@ todo:
   - way to disinclude fields ("all fields except...")
   - multiple delimiters, maybe a -i and -d possible for every -f
   - multiple delimiters, as in multiple patterns will serve as one
-  - negative ranges (relative to end)
   - specify od but not id (maybe support -i and -d or -d and -D)
   - implement a "record" in terms of "field?"
-  - allow to spit out fields backwards (tac for fields)
 """
 
 __url__     = 'https://github.com/src/utilpy/'
@@ -50,6 +56,7 @@ import argparse
 import re
 
 from select import select
+from types import SimpleNamespace
 from sys import argv, stdin, stdout, stderr, exit
 from os import (
     getenv,
@@ -124,32 +131,28 @@ def process_args():
 
 
 class FieldRange:
-    def __init__(self, start='1', end='0'):
-        self.start = int(start) or 1
-        self.end = int(end)
+    def __init__(self, start, end):
+        self.start = int(start) # start is always supplied
+        self.end = None if end is None else int(end)
 
 def parse_fields(rangelist):
-
     ranges = []
     for fieldrange in rangelist.split(','):
-
-        m = re.match(r"\d+$", fieldrange)
-        if m:
-            n = m.group(0)
-            fr = FieldRange(start=n, end=n)
-            ranges += [fr]
+        match = re.fullmatch(r"""
+                (?P<start>-?\d+)
+                (?P<isrange>-
+                    (?P<end>-?\d+)?
+                )?
+            """, fieldrange, re.VERBOSE)
+        if match:
+            ns = SimpleNamespace(**match.groupdict())
+            if not ns.isrange:
+                ns.end = ns.start
+            del ns.isrange
+            ranges += [FieldRange(**vars(ns))]
             continue
-
-        m = re.match(r"(?P<start>\d*)-(?P<end>\d*)$", fieldrange)
-        if m:
-            kw = dict(start=m.group('start'), end=m.group('end'))
-            fr = FieldRange(**{k: v for k, v in kw.items() if v != ''})
-            if fr.start < 1: bomb("start field must be positive")
-            if fr.end and fr.start > fr.end: bomb("start cannot exceed end")
-            ranges += [fr]
-            continue
-
-        else: bomb(f"bad field range: {fieldrange}")
+        else:
+            bomb(f"bad field range: {fieldrange}")
 
     return ranges
 
@@ -168,7 +171,11 @@ def field(rangelist):
         for r in ranges:
             start = r.start
             end = r.end or n
-            indices += list(range(start - 1, end))
+            if start < 0: start = n - abs(start) + 1
+            if end < 0: end = n - abs(end) + 1
+            step = 1 if start <= end else -1
+            offsets = range(start - 1, end - 1 + step, step)
+            indices += [i for i in offsets if 0 <= i < n]
         print(ofs.join([fields[i] for i in indices]), end=ors)
 
 ###
