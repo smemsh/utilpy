@@ -17,6 +17,7 @@ rangelist:
   - unspecified Y in X-Y will default to highest Y in the input
   - if first field in range greater than than last, print reversed
   - if any specified fields do not exist in the record, skip them
+  - field '0' is the same as all fields (range '1-')
 
 range:
       N: just field number N (1 is first)
@@ -35,6 +36,7 @@ examples:
   "echo one two three four five | field 4-2" -> "four three two"
   "echo one two three four five | field 3-" -> "three four five"
   "echo one two three four five | field -2-" -> "four five"
+  "echo one two three | field 1,0" -> "one one two three"
   "echo {1..12} | field -8--10" -> "5 4 3"
   "echo {1..12} | field -8--15" -> "5 4 3 2 1"
   "echo {1..12} | field 3--15" -> "3 2 1"
@@ -159,6 +161,10 @@ def parse_fields(rangelist):
             ns = SimpleNamespace(**match.groupdict())
             if not ns.isrange:
                 ns.end = ns.start
+            else:
+                for endpoint in [ns.start, ns.end]:
+                    if int(endpoint) == 0:
+                        bomb("range spec '0' (all fields) excludes start/end")
             del ns.isrange
             ranges += [FieldRange(**vars(ns))]
             continue
@@ -180,7 +186,7 @@ def field(rangelist):
         n = len(fields)
         indices = []
         for r in ranges:
-            start = r.start
+            start = r.start or 1
             end = r.end or n
             if start < 0: start = n - abs(start) + 1
             if end < 0: end = n - abs(end) + 1
