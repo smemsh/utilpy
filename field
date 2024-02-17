@@ -72,7 +72,7 @@ from select import select
 from types import SimpleNamespace
 from sys import argv, stdin, stdout, stderr, exit
 from os import (
-    getenv,
+    getenv, isatty,
     close as osclose,
     EX_OK as EXIT_SUCCESS,
     EX_SOFTWARE as EXIT_FAILURE,
@@ -236,7 +236,7 @@ if __name__ == "__main__":
     )
 
     # save stdin, pdb needs stdio fds itself
-    if select([stdin], [], [], 0)[0]:
+    if not isatty(stdin.fileno()) and select([stdin], [], [])[0]:
         inbuf = stdin.read() # todo: problematic with large inputs
         osclose(stdin.fileno()) # cpython bug 73582
         try: stdin = open('/dev/tty')
