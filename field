@@ -88,11 +88,6 @@ def bomb(*args, **kwargs):
     err(*args, **kwargs)
     exit(EXIT_FAILURE)
 
-def usagex(*args, **kwargs):
-    argparser.print_help(file=stderr)
-    print(file=stderr)
-    bomb(*args, **kwargs)
-
 def dprint(*args, **kwargs):
     if not debug: return
     err('debug:', *args, **kwargs)
@@ -104,22 +99,34 @@ def dprintvar(name, vars):
 
 ###
 
-# not clear why the interface gives a prefix arg and defaults it, but
-# doesn't allow it to be passed in from anywhere, so we have to override
-#
-class RawTextHelpFormatterEmptyUsageLine(argparse.RawTextHelpFormatter):
-    def add_usage(self, usage, actions, groups, prefix=None):
-        if prefix is None:
-            prefix = ''
-        return super(RawTextHelpFormatterEmptyUsageLine, self) \
-            .add_usage(usage, actions, groups, prefix)
-
 def process_args():
 
     global ifs, ofs
     global args
-    global argparser
-    p = argparser
+
+    def usagex(*args, **kwargs):
+        nonlocal p
+        p.print_help(file=stderr)
+        print(file=stderr)
+        bomb(*args, **kwargs)
+
+    # not clear why the interface gives a prefix arg and defaults it, but
+    # doesn't allow it to be passed in from anywhere, so we have to override
+    #
+    class RawTextHelpFormatterEmptyUsageLine(argparse.RawTextHelpFormatter):
+        def add_usage(self, usage, actions, groups, prefix=None):
+            if prefix is None:
+                prefix = ''
+            return super(RawTextHelpFormatterEmptyUsageLine, self) \
+                .add_usage(usage, actions, groups, prefix)
+
+    p = argparse.ArgumentParser(
+        prog            = invname,
+        description     = __doc__.strip(),
+        allow_abbrev    = False,
+        formatter_class = RawTextHelpFormatterEmptyUsageLine,
+        usage           = "",
+    )
 
     # whether field separators are fixed patterns or regexes
     fixed = False
@@ -232,13 +239,6 @@ if __name__ == "__main__":
 
     args = argv[1:]
     invname = basename(argv[0])
-    argparser = argparse.ArgumentParser(
-        prog            = invname,
-        description     = __doc__.strip(),
-        allow_abbrev    = False,
-        formatter_class = RawTextHelpFormatterEmptyUsageLine,
-        usage           = "",
-    )
 
     # save stdin, pdb needs stdio fds itself
     if not isatty(stdin.fileno()) and select([stdin], [], [])[0]:
@@ -247,7 +247,7 @@ if __name__ == "__main__":
         try: stdin = open('/dev/tty')
         except: pass # no ctty, but then pdb would not be in use
     else:
-        usagex("must supply input on stdin")
+        args = None
 
     from bdb import BdbQuit
     debug = int(getenv('DEBUG') or 0)
