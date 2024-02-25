@@ -76,7 +76,7 @@ from select import select
 from types import SimpleNamespace
 from sys import argv, stdin, stdout, stderr
 from os import (
-    getenv, isatty,
+    getenv, isatty, dup,
     close as osclose,
     EX_OK as EXIT_SUCCESS,
     EX_SOFTWARE as EXIT_FAILURE,
@@ -224,10 +224,11 @@ if __name__ == "__main__":
     args = argv[1:]
     invname = basename(argv[0])
 
-    # save stdin, pdb needs stdio fds itself
-    if not isatty(stdin.fileno()) and select([stdin], [], [])[0]:
-        inbuf = stdin.read() # todo: problematic with large inputs
-        osclose(stdin.fileno()) # cpython bug 73582
+    # move stdin, pdb needs stdio fds itself
+    stdinfd = stdin.fileno()
+    if not isatty(stdinfd) and select([stdin], [], [])[0]:
+        infile = open(dup(stdinfd))
+        osclose(stdinfd)
         try: stdin = open('/dev/tty')
         except: pass # no ctty, but then pdb would not be in use
     else:
