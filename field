@@ -182,7 +182,7 @@ def parse_fields(rangelist):
 
 def field(rangelist):
     ranges = parse_fields(rangelist)
-    records = re.split(irs, inbuf, re.MULTILINE | re.DOTALL)
+    records = re.split(irs, infile.read(), flags=re.MULTILINE|re.DOTALL)
     for n in [0, -1]:
         if not records[n]: records.pop(n)
     for record in records:
