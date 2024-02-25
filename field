@@ -59,6 +59,7 @@ todo:
   - multiple delimiters, as in multiple patterns will serve as one
   - specify od but not id (maybe support -i and -d or -d and -D)
   - implement a "record" in terms of "field?"
+  - generalize to make work on byte streams using binary mode
 """
 
 __url__     = 'https://github.com/src/utilpy/'
