@@ -247,8 +247,9 @@ if __name__ == "__main__":
     irs = "\n"; ors = "\n"
 
     try: main()
-    except SystemExit: raise
     except BdbQuit: bomb("debug: stop")
+    except SystemExit: raise
+    except KeyboardInterrupt: bomb("interrupted")
     except: print_exc(file=stderr)
     finally: # cpython bug 55589
         try: stdout.flush()
