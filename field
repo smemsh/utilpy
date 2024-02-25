@@ -71,6 +71,7 @@ if hexversion < 0x030900f0: exit("minpython: %x" % hexversion)
 import argparse
 import re
 
+from traceback import print_exc
 from select import select
 from types import SimpleNamespace
 from sys import argv, stdin, stdout, stderr
@@ -214,14 +215,7 @@ def main():
     except (KeyError, TypeError):
         bomb(f"unimplemented command '{invname}'")
 
-    try: return subprogram(rangelist)
-    finally: # cpython bug 55589
-        try: stdout.flush()
-        finally:
-            try: stdout.close()
-            finally:
-                try: stderr.flush()
-                finally: stderr.close()
+    return subprogram(rangelist)
 
 ###
 
@@ -249,4 +243,13 @@ if __name__ == "__main__":
     irs = "\n"; ors = "\n"
 
     try: main()
+    except SystemExit: raise
     except BdbQuit: bomb("debug: stop")
+    except: print_exc(file=stderr)
+    finally: # cpython bug 55589
+        try: stdout.flush()
+        finally:
+            try: stdout.close()
+            finally:
+                try: stderr.flush()
+                finally: stderr.close()
