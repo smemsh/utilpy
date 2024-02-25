@@ -169,7 +169,7 @@ def parse_fields(rangelist):
                 ns.end = ns.start
             else:
                 for endpoint in [ns.start, ns.end]:
-                    if int(endpoint) == 0:
+                    if endpoint is not None and int(endpoint) == 0:
                         bomb("range spec '0' (all fields) excludes start/end")
             del ns.isrange
             ranges += [FieldRange(**vars(ns))]
