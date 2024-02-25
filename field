@@ -91,15 +91,6 @@ def bomb(*args, **kwargs):
     err(*args, **kwargs)
     exit(EXIT_FAILURE)
 
-def dprint(*args, **kwargs):
-    if not debug: return
-    err('debug:', *args, **kwargs)
-
-def dprintvar(name, vars):
-    if not debug: return
-    err(f"debug: {name}")
-    pp(vars[name])
-
 ###
 
 def process_args():
