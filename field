@@ -134,7 +134,7 @@ def process_args():
     def addflag(*args, **kwargs):
         addopt(*args, action='store_true', **kwargs)
 
-    addflag (p, 'r', 'regex', "ifs/ofs are regular expressions")
+    addflag (p, 'r', 'regex', "ifs is a regular expression")
 
     args, left = p.parse_known_args(args)
 
