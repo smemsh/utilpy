@@ -9,7 +9,7 @@ args:
   - 3-arg: field <indelim> <outdelim> <rangelist>
   - if supplied, indelim is a fixed string, unless -r/--regex
   - indelim defaults to any char in $IFS, or the regex [\\x20\\t\\n]
-  - records are split on newlines only so far
+  - records are split on newlines, or nulls if -0/--null
 
 rangelist:
   - specifier is a comma separated list of ranges
@@ -97,7 +97,7 @@ def bomb(*args, **kwargs):
 
 def process_args():
 
-    global ifs, ofs
+    global ifs, ofs, irs
     global args
 
     def usagex(*args, **kwargs):
@@ -134,6 +134,7 @@ def process_args():
     def addflag(*args, **kwargs):
         addopt(*args, action='store_true', **kwargs)
 
+    addflag (p, '0', 'null', "irs is a '\\0' char")
     addflag (p, 'r', 'regex', "ifs is a python regex")
 
     args, left = p.parse_known_args(args)
@@ -147,6 +148,7 @@ def process_args():
         else: usagex("bad args")
 
     if fixed: ifs = re.escape(ifs)
+    if args.null: irs = '\0'
 
     return fields
 
