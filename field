@@ -4,10 +4,10 @@ field [options] [args]
   select and output fields from each record from stdin
 
 args:
-  - 1-arg: field <rangelist>
-  - 2-arg: field <indelim> <rangelist>
-  - 3-arg: field <indelim> <outdelim> <rangelist>
-  - if supplied, indelim is a fixed string, unless -r/--regex
+  - 1-arg: field [options] <rangelist>
+  - 2-arg: field [non-field opts] <indelim> <rangelist>
+  - 3-arg: field [non-field opts] <indelim> <outdelim> <rangelist>
+  - if supplied by position, indelim is a python string, unless -r/--regex
   - indelim defaults to any char in $IFS, or the regex [\\x20\\t\\n]
   - records are split on newlines, or nulls if -0/--null
   - output records are newline-delimited, or nulls if -z/--zero
@@ -47,18 +47,14 @@ examples:
 """
 todo:
   - read from files given as additional arguments
-  - /R/: fields matching regex R;
   - /R/-/S/: starting with /R/ and ending with /S/
-  - specify record delimiter
   - specify record selection criteria (pattern)
   - field reformatting, eg wrapping, fit in column or on page
-  - args like -r record-regex -f range1,range2 -F format1,format2
   - args like -g columnate_group
   - different behaviors for range overlaps (set union, addition)
   - way to disinclude fields ("all fields except...")
   - multiple delimiters, maybe a -i and -d possible for every -f
   - multiple delimiters, as in multiple patterns will serve as one
-  - specify od but not id (maybe support -i and -d or -d and -D)
   - implement a "record" in terms of "field?"
   - generalize to make work on byte streams using binary mode
 """
@@ -125,9 +121,6 @@ def process_args():
         usage           = "",
     )
 
-    # whether field separators are fixed patterns or regexes
-    fixed = False
-
     def addopt(p, flagchar, longopt, help=None, /, **kwargs):
         options = list(("-%s --%s" % (flagchar, longopt)).split())
         p.add_argument(*options, help=help, **kwargs)
@@ -135,23 +128,48 @@ def process_args():
     def addflag(*args, **kwargs):
         addopt(*args, action='store_true', **kwargs)
 
+    addopt  (p, 'F', 'ifsre', "input field separator as python regex")
+    addopt  (p, 'R', 'irsre', "input record separator as python regex")
+    addopt  (p, 'i', 'ifs', "input field separator as python string")
+    addopt  (p, 'I', 'irs', "input record separator as python string")
+    addopt  (p, 'o', 'ofs', "output field separator string")
+    addopt  (p, 'O', 'ors', "output record separator string")
     addflag (p, '0', 'null', "irs is a '\\0' char")
     addflag (p, 'z', 'zero', "ors is a '\\0' char")
-    addflag (p, 'r', 'regex', "ifs is a python regex")
+    addflag (p, 'r', 'regex', "positional ifs is a python regex")
 
     args, left = p.parse_known_args(args)
 
-    n = len(left)
-    if n == 1: fields = left[0]
-    else:
-        if not args.regex: fixed = True
-        if n == 2: ifs = left[0]; fields = left[1]
-        elif n == 3: ifs = left[0]; ofs = left[1]; fields = left[2]
-        else: usagex("bad args")
+    fieldopts = ['ifs', 'ifsre', 'ofs']
+    havefopts = any([hasattr(args, a) for a in fieldopts])
 
-    if fixed: ifs = re.escape(ifs)
+    n = len(left)
+    if n > 0:
+        fields = left[0]
+        if n != 1:
+            # positional arg syntax
+            if havefopts:
+                usagex("ifs/ofs must be either positional or optional")
+            else:
+                if n == 2: ifs = left[0]; fields = left[1]
+                elif n == 3: ifs = left[0]; ofs = left[1]; fields = left[2]
+                else: usagex("bad args")
+
+    if args.regex and havefopts:
+        bomb("-r/--regex only used for positional field opts")
+    if args.null and args.irs:
+        bomb("-0/--null and --irs are mutually exclusive")
+    if args.zero and args.ors:
+        bomb("-z/--zero, --ors are mutually exclusive")
+
     if args.null: irs = '\0'
     if args.zero: ors = '\0'
+
+    ifs = args.ifsre or ifs
+    irs = args.irsre or irs
+
+    if not (args.regex or args.ifsre): ifs = re.escape(ifs)
+    if not args.irsre: irs = re.escape(irs)
 
     return fields
 
