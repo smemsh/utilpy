@@ -137,6 +137,9 @@ def process_args():
     addflag (p, '0', 'null', "irs is a '\\0' char")
     addflag (p, 'z', 'zero', "ors is a '\\0' char")
     addflag (p, 'r', 'regex', "positional ifs is a python regex")
+    addflag (p, 'G', 'noedges', "discard initial or trailing empty fields")
+    addflag (p, 'e', 'noempty', "discard empty fields within a record")
+    addflag (p, 'E', 'noblanks', "discard blank records with no fields")
 
     args, left = p.parse_known_args(args)
 
@@ -206,14 +209,29 @@ def parse_fields(rangelist):
 
 
 def field(rangelist):
+
+    global args
     ranges = parse_fields(rangelist)
+
     records = re.split(irs, infile.read(), flags=re.MULTILINE|re.DOTALL)
-    for n in [0, -1]:
-        if not records[n]: records.pop(n)
+
     for record in records:
+
+        if args.noblanks and not record:
+            continue
+
         fields = re.split(ifs, record)
-        # https://stackoverflow.com/questions/2197451
-        fields = [f for f in fields if f]
+        if args.noedges:
+            for i in range(len(fields)): # leading
+                if not fields[i]: del fields[i]
+                else: break
+            for i in range(len(fields - 1), -1, -1): # trailing
+                if not fields[i]: del fields[i]
+                else: break
+
+        if args.noempty:
+            fields = [f for f in fields if f]
+
         n = len(fields)
         indices = []
         for r in ranges:
