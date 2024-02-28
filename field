@@ -141,7 +141,7 @@ def process_args():
     args, left = p.parse_known_args(args)
 
     fieldopts = ['ifs', 'ifsre', 'ofs']
-    havefopts = any([hasattr(args, a) for a in fieldopts])
+    havefopts = any([getattr(args, a) for a in fieldopts])
 
     n = len(left)
     if n > 0:
