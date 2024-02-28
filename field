@@ -211,9 +211,12 @@ def parse_fields(rangelist):
 def field(rangelist):
 
     global args
-    ranges = parse_fields(rangelist)
 
+    ranges = parse_fields(rangelist)
     records = re.split(irs, infile.read(), flags=re.MULTILINE|re.DOTALL)
+
+    # record delimiter at eof terminates input, as in awk
+    if not records[-1]: records.pop()
 
     for record in records:
 
