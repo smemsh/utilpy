@@ -245,7 +245,9 @@ def field(rangelist):
             step = 1 if start <= end else -1
             offsets = range(start - 1, end - 1 + step, step)
             indices += [i for i in offsets if 0 <= i < n]
-        print(ofs.join([fields[i] for i in indices]), end=ors)
+
+        try: print(ofs.join([fields[i] for i in indices]), end=ors)
+        except BrokenPipeError: pass # eg "field | head"
 
 ###
 
