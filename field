@@ -146,24 +146,24 @@ def process_args():
 
     args, left = p.parse_known_args(args)
 
-    havefopts = hasopt('ifs', 'ifsre', 'ofs')
-
     n = len(left)
+
     if n == 0:
         fields = '1-'
     else:
         fields = left[0]
-        if n != 1:
+        if n == 1:
+            if args.regex:
+                bomb("-r/--regex only for positionally specified ifs")
+        else:
             # positional arg syntax
-            if havefopts:
+            if hasopt('ifs', 'ifsre', 'ofs'):
                 usagex("ifs/ofs must be either positional or optional")
             else:
                 if n == 2: ifs = left[0]; fields = left[1]
                 elif n == 3: ifs = left[0]; ofs = left[1]; fields = left[2]
                 else: usagex("bad args")
 
-    if args.regex and havefopts:
-        bomb("-r/--regex only used for positional field opts")
     if args.null and args.irs:
         bomb("-0/--null and --irs are mutually exclusive")
     if args.zero and args.ors:
