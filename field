@@ -128,6 +128,9 @@ def process_args():
     def addflag(*args, **kwargs):
         addopt(*args, action='store_true', **kwargs)
 
+    def hasopt(*options):
+        return any([getattr(args, a) for a in [*options]])
+
     addopt  (p, 'F', 'ifsre', "input field separator as python regex")
     addopt  (p, 'R', 'irsre', "input record separator as python regex")
     addopt  (p, 'i', 'ifs', "input field separator as python string")
@@ -143,8 +146,7 @@ def process_args():
 
     args, left = p.parse_known_args(args)
 
-    fieldopts = ['ifs', 'ifsre', 'ofs']
-    havefopts = any([getattr(args, a) for a in fieldopts])
+    havefopts = hasopt('ifs', 'ifsre', 'ofs')
 
     n = len(left)
     if n == 0:
