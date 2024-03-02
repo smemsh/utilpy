@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 field [options] [args]
   select and output fields from each record from stdin
 
@@ -8,7 +8,7 @@ args:
   - 2-arg: field [non-field opts] <indelim> <rangelist>
   - 3-arg: field [non-field opts] <indelim> <outdelim> <rangelist>
   - if supplied by position, indelim is a python string, unless -r/--regex
-  - indelim defaults to any char in $IFS, or the regex [\\x20\\t\\n]
+  - indelim defaults to any char in $IFS, or the regex [\x20\t\n]
   - records are split on newlines, or nulls if -0/--null
   - output records are newline-delimited, or nulls if -z/--zero
 
