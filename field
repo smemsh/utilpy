@@ -177,6 +177,12 @@ def process_args():
                 else:
                     usagex("bad args")
 
+    if not ifs:
+        ifs = getenv('IFS')
+        if ifs:
+            ifs = f"[{ifsenv}]"
+            args.regex = True
+
     if args.null and args.irs:
         bomb("-0/--null and --irs are mutually exclusive")
     if args.zero and args.ors:
@@ -311,7 +317,7 @@ if __name__ == "__main__":
         from pprint import pp
         err('debug: enabled')
 
-    ifs = '[' + getenv('IFS', r'\x20\t\n') + ']'; ofs = "\x20"
+    ifs = None; ofs = '\x20'
     irs = "\n"; ors = "\n"
 
     try: main()
