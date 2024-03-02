@@ -192,7 +192,10 @@ def process_args():
     if args.zero: ors = '\0'
 
     ifs = args.ifsre or unesc(args.ifs) or ifs
+    ofs = unesc(args.ofs) or ofs
+
     irs = args.irsre or unesc(args.irs) or irs
+    ors = unesc(args.ors) or ors
 
     return fields
 
