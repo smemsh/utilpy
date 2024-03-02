@@ -147,7 +147,9 @@ def process_args():
     havefopts = any([getattr(args, a) for a in fieldopts])
 
     n = len(left)
-    if n > 0:
+    if n == 0:
+        fields = '1-'
+    else:
         fields = left[0]
         if n != 1:
             # positional arg syntax
