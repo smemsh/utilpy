@@ -103,6 +103,11 @@ def process_args():
         print(file=stderr)
         bomb(*args, **kwargs)
 
+    # parse_args() gives escaped strings
+    def unesc(s):
+        if s is None: return
+        else: return s.encode('raw-unicode-escape').decode('unicode-escape')
+
     # not clear why the interface gives a prefix arg and defaults it, but
     # doesn't allow it to be passed in from anywhere, so we have to override
     #
@@ -160,9 +165,17 @@ def process_args():
             if hasopt('ifs', 'ifsre', 'ofs'):
                 usagex("ifs/ofs must be either positional or optional")
             else:
-                if n == 2: ifs = left[0]; fields = left[1]
-                elif n == 3: ifs = left[0]; ofs = left[1]; fields = left[2]
-                else: usagex("bad args")
+                ifs = left[0]
+                if not args.regex:
+                    # leave escaped if regex, as in raw string
+                    ifs = unesc(ifs)
+                if n == 2:
+                    fields = left[1]
+                elif n == 3:
+                    ofs = unesc(left[1])
+                    fields = left[2]
+                else:
+                    usagex("bad args")
 
     if args.null and args.irs:
         bomb("-0/--null and --irs are mutually exclusive")
@@ -172,11 +185,8 @@ def process_args():
     if args.null: irs = '\0'
     if args.zero: ors = '\0'
 
-    ifs = args.ifsre or ifs
-    irs = args.irsre or irs
-
-    if not (args.regex or args.ifsre): ifs = re.escape(ifs)
-    if not args.irsre: irs = re.escape(irs)
+    ifs = args.ifsre or unesc(args.ifs) or ifs
+    irs = args.irsre or unesc(args.irs) or irs
 
     return fields
 
