@@ -226,8 +226,14 @@ def field(rangelist):
 
     global args
 
+    buf = infile.read()
     ranges = parse_fields(rangelist)
-    records = re.split(irs, infile.read(), flags=re.MULTILINE|re.DOTALL)
+
+    r_isre = args.irsre and not args.null
+    f_isre = args.ifsre or args.regex
+
+    if r_isre: records = re.split(irs, buf, flags=re.MULTILINE|re.DOTALL)
+    else: records = buf.split(irs)
 
     # record delimiter at eof terminates input, as in awk
     if not records[-1]: records.pop()
@@ -237,7 +243,9 @@ def field(rangelist):
         if args.noblanks and not record:
             continue
 
-        fields = re.split(ifs, record)
+        if f_isre: fields = re.split(ifs, record)
+        else: fields = record.split(ifs)
+
         if args.noedges:
             for i in range(len(fields)): # leading
                 if not fields[i]: del fields[i]
