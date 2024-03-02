@@ -180,7 +180,7 @@ def process_args():
     if not ifs:
         ifs = getenv('IFS')
         if ifs:
-            ifs = f"[{ifsenv}]"
+            ifs = f"[{ifsenv}]+"
             args.regex = True
 
     if args.null and args.irs:
