@@ -90,10 +90,10 @@ if hexversion < 0x030900f0: exit("minpython: %x" % hexversion)
 import argparse
 import re
 
-from traceback import print_exc
-from select import select
-from types import SimpleNamespace
 from sys import argv, stdin, stdout, stderr
+from types import SimpleNamespace
+from select import select
+from traceback import print_exc
 from os import (
     getenv, isatty, dup,
     close as osclose,
