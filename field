@@ -19,8 +19,8 @@ fields:
   - if '-i <value>', uses 'str.split(sep="<value>")'
   - if '-F <value>', uses 're.split(r"<value>")'
   - if $IFS set, splits on its chars: 're.split(f"[{getenv(IFS)}]+")'
-  - if '-e', empty fields are discarded
-  - if '-G', leading or trailing blank fields are discarded
+  - if '-e', all empty fields are discarded
+  - if '-G', only leading or trailing blank fields are discarded
 
 records:
   - defaults to newline: 'str.split(sep="\n")'
