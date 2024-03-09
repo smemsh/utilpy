@@ -279,7 +279,7 @@ def field(rangelist):
             for i in range(len(fields)): # leading
                 if not fields[i]: del fields[i]
                 else: break
-            for i in range(len(fields - 1), -1, -1): # trailing
+            for i in range(len(fields) - 1, -1, -1): # trailing
                 if not fields[i]: del fields[i]
                 else: break
 
