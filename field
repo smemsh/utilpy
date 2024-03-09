@@ -277,8 +277,9 @@ def field(rangelist):
         else: fields = record.split(ifs)
 
         if args.noedges:
-            for i in range(len(fields)): # leading
-                if not fields[i]: del fields[i]
+            indices = list(range(len(fields)))
+            for i in indices: # leading
+                if not fields[i]: del fields[i]; indices.pop()
                 else: break
             for i in range(len(fields) - 1, -1, -1): # trailing
                 if not fields[i]: del fields[i]
