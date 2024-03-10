@@ -98,7 +98,7 @@ from select import select
 from functools import partial
 from traceback import print_exc
 from os import (
-    getenv, isatty, dup, write,
+    getenv, isatty, dup,
     close as osclose,
     EX_OK as EXIT_SUCCESS,
     EX_SOFTWARE as EXIT_FAILURE,
@@ -269,7 +269,7 @@ def parse_fields(rangelist):
 def field(rangelist):
 
     ranges = parse_fields(rangelist)
-    outfd = stdout.fileno()
+    out = stdout.buffer
 
     g = globals()
     for var in ['ifs', 'irs', 'ofs', 'ors']:
@@ -328,7 +328,7 @@ def field(rangelist):
             offsets = range(start - 1, end - 1 + step, step)
             indices += [i for i in offsets if 0 <= i < n]
 
-        try: write(outfd, ofs.join([fields[i] for i in indices]) + ors)
+        try: out.write(ofs.join([fields[i] for i in indices]) + ors)
         except BrokenPipeError: exit(EXIT_SUCCESS) # eg "field | head"
 
 ###
