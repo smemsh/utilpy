@@ -27,6 +27,8 @@ records:
   - if '-I <value>', uses 'bytes.split(sep="<value>")'
   - if '-R <value>', uses 're.split(r"<value>")'
   - if '-E', empty records in input are discarded
+  - processes input as bytes, in chunks of io.DEFAULT_BUFFER_SIZE
+  - chunk size overridden with '-b/--bsz' (optional k or m suffix)
 
 outdelims:
   - fields default to space, ie '\x20', or via $2, or via -o/--ofs
@@ -164,6 +166,7 @@ def process_args():
     addopt  (p, 'I', 'irs', "input record separator as python string")
     addopt  (p, 'o', 'ofs', "output field separator string")
     addopt  (p, 'O', 'ors', "output record separator string")
+    addopt  (p, 'b', 'bsz', "bytes per read, optional m or k suffix")
     addflag (p, '0', 'null', "irs is a '\\0' char")
     addflag (p, 'z', 'zero', "ors is a '\\0' char")
     addflag (p, 'r', 'regex', "positional ifs is a python regex")
@@ -218,6 +221,16 @@ def process_args():
 
     irs = args.irsre or unesc(args.irs) or irs
     ors = unesc(args.ors) or ors
+
+    if b := args.bsz:
+        if m := re.fullmatch(r'(?P<bsz>\d+)(?P<unit>[km]?)', b, re.I):
+            b = int(m.group('bsz'))
+            u = m.group('unit')
+            if u == 'k': b <<= 10
+            elif u == 'm': b <<= 20
+            args.bsz = b
+        else:
+            bomb("invalid bsz parameter")
 
     return fields
 
@@ -281,7 +294,7 @@ def field(rangelist):
             # delim at eof terminates input, as in awk
             yield record
 
-    bufs = iter(partial(infile.read, BUFSIZ), '')
+    bufs = iter(partial(infile.read, args.bsz or BUFSIZ), '')
     records = recordize(bufs, irs)
 
     for record in records:
