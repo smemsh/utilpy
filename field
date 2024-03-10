@@ -13,18 +13,18 @@ args:
   - regex delimiters are python raw strings
 
 fields:
-  - defaults to whitespace: 'str.split(sep=None)'
-  - if supplied as $1, uses 'str.split(sep="$1")'
+  - defaults to whitespace: 'bytes.split(sep=None)'
+  - if supplied as $1, uses 'bytes.split(sep="$1")'
   - if '-r', uses 're.split(r'$1')'
-  - if '-i <value>', uses 'str.split(sep="<value>")'
+  - if '-i <value>', uses 'bytes.split(sep="<value>")'
   - if '-F <value>', uses 're.split(r"<value>")'
   - if $IFS set, splits on its chars: 're.split(f"[{getenv(IFS)}]+")'
   - if '-e', all empty fields are discarded
   - if '-G', only leading or trailing blank fields are discarded
 
 records:
-  - defaults to newline: 'str.split(sep="\n")'
-  - if '-I <value>', uses 'str.split(sep="<value>")'
+  - defaults to newline: 'bytes.split(sep="\n")'
+  - if '-I <value>', uses 'bytes.split(sep="<value>")'
   - if '-R <value>', uses 're.split(r"<value>")'
   - if '-E', empty records in input are discarded
 
@@ -76,7 +76,6 @@ todo:
   - multiple delimiters, maybe a -i and -d possible for every -f
   - multiple delimiters, as in multiple patterns will serve as one
   - implement a "record" in terms of "field?"
-  - generalize to make work on byte streams using binary mode
   - flag to discard empty records in output (no non-empty fields)
 """
 
@@ -90,12 +89,14 @@ if hexversion < 0x030900f0: exit("minpython: %x" % hexversion)
 import argparse
 import re
 
+from io import DEFAULT_BUFFER_SIZE as BUFSIZ
 from sys import argv, stdin, stdout, stderr
 from types import SimpleNamespace
 from select import select
+from functools import partial
 from traceback import print_exc
 from os import (
-    getenv, isatty, dup,
+    getenv, isatty, dup, write,
     close as osclose,
     EX_OK as EXIT_SUCCESS,
     EX_SOFTWARE as EXIT_FAILURE,
@@ -254,17 +255,34 @@ def parse_fields(rangelist):
 
 def field(rangelist):
 
-    buf = infile.read()
     ranges = parse_fields(rangelist)
+    outfd = stdout.fileno()
+
+    g = globals()
+    for var in ['ifs', 'irs', 'ofs', 'ors']:
+        if g[var]: g[var] = bytes(g[var], 'utf-8')
 
     r_isre = args.irsre and not args.null
     f_isre = args.ifsre or args.regex
+    reflags = re.MULTILINE | re.DOTALL
 
-    if r_isre: records = re.split(irs, buf, flags=re.MULTILINE|re.DOTALL)
-    else: records = buf.split(irs)
+    # readlines() does not accept delim, and no plans (cpython #41622)
+    def recordize(bufs, delim):
+        record = ''
+        for buf in bufs:
+            if record: record += buf
+            else: record = buf
+            if not buf: break
+            if r_isre: records = re.split(delim, record, reflags)
+            else: records = record.split(delim)
+            record = records.pop()
+            yield from records
+        if record:
+            # delim at eof terminates input, as in awk
+            yield record
 
-    # record delimiter at eof terminates input, as in awk
-    if not records[-1]: records.pop()
+    bufs = iter(partial(infile.read, BUFSIZ), '')
+    records = recordize(bufs, irs)
 
     for record in records:
 
@@ -297,7 +315,7 @@ def field(rangelist):
             offsets = range(start - 1, end - 1 + step, step)
             indices += [i for i in offsets if 0 <= i < n]
 
-        try: print(ofs.join([fields[i] for i in indices]), end=ors)
+        try: write(outfd, ofs.join([fields[i] for i in indices]) + ors)
         except BrokenPipeError: exit(EXIT_SUCCESS) # eg "field | head"
 
 ###
@@ -327,7 +345,7 @@ if __name__ == "__main__":
     # move stdin, pdb needs stdio fds itself
     stdinfd = stdin.fileno()
     if not isatty(stdinfd) and select([stdin], [], [])[0]:
-        infile = open(dup(stdinfd))
+        infile = open(dup(stdinfd), 'rb')
         osclose(stdinfd)
         try: stdin = open('/dev/tty')
         except: pass # no ctty, but then pdb would not be in use
