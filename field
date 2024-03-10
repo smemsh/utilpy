@@ -237,15 +237,15 @@ def parse_fields(rangelist):
                 )?
             """, fieldrange, re.VERBOSE)
         if match:
-            ns = SimpleNamespace(**match.groupdict())
-            if not ns.isrange:
-                ns.end = ns.start
+            m = SimpleNamespace(**match.groupdict())
+            if not m.isrange:
+                m.end = m.start
             else:
-                for endpoint in [ns.start, ns.end]:
+                for endpoint in [m.start, m.end]:
                     if endpoint is not None and int(endpoint) == 0:
                         bomb("range spec '0' (all fields) excludes start/end")
-            del ns.isrange
-            ranges += [FieldRange(**vars(ns))]
+            del m.isrange
+            ranges += [FieldRange(**vars(m))]
             continue
         else:
             bomb(f"bad field range: {fieldrange}")
