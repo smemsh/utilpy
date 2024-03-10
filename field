@@ -173,6 +173,7 @@ def process_args():
     addflag (p, 'G', 'noedges', "discard initial or trailing empty fields")
     addflag (p, 'e', 'noempty', "discard empty fields within a record")
     addflag (p, 'E', 'noblanks', "discard blank records with no fields")
+    addflag (p, 'l', 'flushrecs', "do individual writes every record")
 
     args, left = p.parse_known_args(args)
 
@@ -269,6 +270,7 @@ def parse_fields(rangelist):
 def field(rangelist):
 
     ranges = parse_fields(rangelist)
+    flush = True if args.flushrecs else False
     out = stdout.buffer
 
     g = globals()
@@ -328,8 +330,11 @@ def field(rangelist):
             offsets = range(start - 1, end - 1 + step, step)
             indices += [i for i in offsets if 0 <= i < n]
 
-        try: out.write(ofs.join([fields[i] for i in indices]) + ors)
-        except BrokenPipeError: exit(EXIT_SUCCESS) # eg "field | head"
+        try:
+            out.write(ofs.join([fields[i] for i in indices]) + ors)
+            if flush: out.flush()
+        except BrokenPipeError:
+            exit(EXIT_SUCCESS) # eg "field | head"
 
 ###
 
