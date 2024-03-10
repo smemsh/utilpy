@@ -300,7 +300,7 @@ def field(rangelist):
             indices += [i for i in offsets if 0 <= i < n]
 
         try: print(ofs.join([fields[i] for i in indices]), end=ors)
-        except BrokenPipeError: pass # eg "field | head"
+        except BrokenPipeError: exit(EXIT_SUCCESS) # eg "field | head"
 
 ###
 
