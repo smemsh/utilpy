@@ -254,8 +254,6 @@ def parse_fields(rangelist):
 
 def field(rangelist):
 
-    global args
-
     buf = infile.read()
     ranges = parse_fields(rangelist)
 
