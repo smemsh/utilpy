@@ -7,7 +7,7 @@ installs in-dir exe files and symlinks, or all .rclinks, to [homedir]
 
   installrc:
     recreate using relative links in ${2:-~}/, all .rclinks in ${1:-.}/ which
-    target exes in {$1:-.}/, including any intermediate links (with needed
+    target files in {$1:-.}/, including any intermediate links (with needed
     mkdirs) in chains of multi-level symlinks, as long as all levels are
     descendants of ${1:-.}/ and the end target is in ${1:-.}/
 
