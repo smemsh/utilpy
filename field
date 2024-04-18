@@ -346,6 +346,9 @@ def field(rangelist):
             lastloop = True
             if args.noendrec:
                 ors = b''
+            if isatty(stdout.fileno()):
+                if not ors.endswith(b'\n'):
+                    ors += b'\n'
 
         output += ors
 
