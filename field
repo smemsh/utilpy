@@ -27,6 +27,7 @@ records:
   - if '-I <value>', uses 'bytes.split(sep="<value>")'
   - if '-R <value>', uses 're.split(r"<value>")'
   - if '-E', empty records in input are discarded
+  - if '-N', trailing separator on last record not emitted
   - processes input as bytes, in chunks of io.DEFAULT_BUFFER_SIZE
   - chunk size overridden with '-b/--bsz' (optional k or m suffix)
 
@@ -173,6 +174,7 @@ def process_args():
     addflag (p, 'G', 'noedges', "discard initial or trailing empty fields")
     addflag (p, 'e', 'noempty', "discard empty fields within a record")
     addflag (p, 'E', 'noblanks', "discard blank records with no fields")
+    addflag (p, 'N', 'noendrec', "skip ors after last record was emitted")
     addflag (p, 'l', 'flushrecs', "do individual writes every record")
 
     args, left = p.parse_known_args(args)
@@ -269,6 +271,8 @@ def parse_fields(rangelist):
 
 def field(rangelist):
 
+    global ors
+
     ranges = parse_fields(rangelist)
     flush = True if args.flushrecs else False
     out = stdout.buffer
@@ -299,7 +303,12 @@ def field(rangelist):
     bufs = iter(partial(infile.read, args.bsz or BUFSIZ), '')
     records = recordize(bufs, irs)
 
-    for record in records:
+    # handle iteration ourselves, so last loop can behave differently
+    try: record = next(records) # preload first record before entering loop
+    except StopIteration: return # early exit, not even one input record
+    lastloop = False
+
+    while True:
 
         if args.noblanks and not record:
             continue
@@ -330,11 +339,24 @@ def field(rangelist):
             offsets = range(start - 1, end - 1 + step, step)
             indices += [i for i in offsets if 0 <= i < n]
 
+        output = ofs.join([fields[i] for i in indices])
+
+        try: record = next(records)
+        except StopIteration:
+            lastloop = True
+            if args.noendrec:
+                ors = b''
+
+        output += ors
+
         try:
-            out.write(ofs.join([fields[i] for i in indices]) + ors)
+            out.write(output)
             if flush: out.flush()
         except BrokenPipeError:
             exit(EXIT_SUCCESS) # eg "field | head"
+
+        if lastloop:
+            break
 
 ###
 
