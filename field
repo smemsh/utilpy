@@ -177,6 +177,7 @@ def process_args():
     addflag (p, 'N', 'noendrec', "skip ors after last record was emitted")
     addflag (p, 'l', 'flushrecs', "do individual writes every record")
 
+    if not args: usagex("must supply args on stdin")
     args, left = p.parse_known_args(args)
 
     n = len(left)
