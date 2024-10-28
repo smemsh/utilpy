@@ -9,7 +9,7 @@
 # todo:
 #   - optionally pre-pass through jinja2
 #
-# http://smemsh.net/src/utilsh/
+# https://github.com/smemsh/utilsh/
 # http://spdx.org/licenses/GPL-2.0
 # scott@smemsh.net
 #
