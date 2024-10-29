@@ -82,7 +82,7 @@ todo:
   - flag to discard empty records in output (no non-empty fields)
 """
 
-__url__     = 'https://github.com/src/utilpy/'
+__url__     = 'https://github.com/smemsh/utilpy/'
 __author__  = 'Scott Mcdermott <scott@smemsh.net>'
 __license__ = 'GPL-2.0'
 
