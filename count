@@ -10,7 +10,6 @@
 # status:
 #   - experiment to determine python's speed with simple IO loop + counter
 #   - not very fast! using mmap supposedly doubles, but still... unimpressive
-#   - learning python
 #
 # scott@smemsh.net
 # https://github.com/smemsh/utilpy/
