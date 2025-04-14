@@ -68,11 +68,15 @@ if __name__ == "__main__":
 
     # move stdin, pdb needs stdio fds itself
     stdinfd = stdin.fileno()
-    if not isatty(stdinfd) and select([stdin], [], [])[0]:
-        infile = open(dup(stdinfd))
-        osclose(stdinfd) # cpython bug 73582
-        try: stdin = open('/dev/tty')
-        except: pass # no ctty, but then pdb would not be in use
+    if not isatty(stdinfd):
+        try:
+            if select([stdin], [], [])[0]:
+                infile = open(dup(stdinfd))
+                osclose(stdinfd) # cpython bug 73582
+                try: stdin = open('/dev/tty')
+                except: pass # no ctty, but then pdb would not be in use
+        except KeyboardInterrupt:
+            bomb("interrupted")
     else:
         bomb("must supply input on stdin")
 
