@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """
+hostfill
+  replace ipv4 addresses in the input with looked up names in output
 """
 __url__     = 'https://github.com/smemsh/utilpy/'
 __author__  = 'Scott Mcdermott <scott@smemsh.net>'
@@ -48,11 +50,24 @@ def process_args():
     def addflag(*args, **kwargs):
         addopt(*args, action='store_true', **kwargs)
 
+    # avoid initial 'usage:' line by providing as formatter_class and
+    # providing empty string for 'usage'.  not clear why the interface
+    # gives a prefix arg and defaults it, but doesn't allow it to be
+    # passed in from anywhere, so we have to override
+    #
+    class RawTextHelpFormatterEmptyUsageLine(argparse.RawTextHelpFormatter):
+        def add_usage(self, usage, actions, groups, prefix=None):
+            if prefix is None:
+                prefix = ''
+            return super(RawTextHelpFormatterEmptyUsageLine, self) \
+                .add_usage(usage, actions, groups, prefix)
+
     p = argparse.ArgumentParser(
         prog            = invname,
         description     = __doc__.strip(),
         allow_abbrev    = False,
-        formatter_class = RawTextHelpFormatter,
+        formatter_class = RawTextHelpFormatterEmptyUsageLine,
+        usage           = "",
     )
     addflag(p, 's', 'sort', 'filter output through version sort')
     args = p.parse_args(args)
