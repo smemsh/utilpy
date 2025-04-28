@@ -108,6 +108,7 @@ def main():
         out = sortout
     print(out.decode(), end='')
 
+    exit(EXIT_SUCCESS)
 
 
 ###
