@@ -13,7 +13,7 @@ from sys import argv, stdin, stdout, stderr, maxsize
 from select import select
 from socket import gethostbyaddr, herror
 from traceback import print_exc
-from subprocess import check_output
+from subprocess import Popen, PIPE
 
 from os.path import basename
 from os import (
@@ -55,9 +55,13 @@ def main():
     if debug == 1:
         breakpoint()
 
+    out = []
     for line in infile:
-        line = line[:-1]  # newline
-        print(sub(r'\b((\d{1,3}\.){3}\d{1,3})\b', host2ip, line))
+        out.append(sub(r'\b((\d{1,3}\.){3}\d{1,3})\b', host2ip, line))
+
+    sortexe = Popen(['sort', '-V', '-'], stdin=PIPE, stdout=PIPE)
+    sortout, sorterr = sortexe.communicate(''.join(out).encode())
+    print(sortout.decode(), end='')
 
 
 ###
