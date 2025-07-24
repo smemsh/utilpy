@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+"""
+lensort
+  sort input lines by length, with cutoff length, and fold multi-field lines
+
+"""
+__url__     = 'https://github.com/smemsh/utilpy/'
+__author__  = 'Scott Mcdermott <scott@smemsh.net>'
+__license__ = 'GPL-2.0'
+__devskel__ = '0.7.4'
+
+from sys import exit, hexversion
+if hexversion < 0x030900f0: exit("minpython: %s" % hexversion)
+
+import argparse, re
+
+from sys import argv, stdin, stdout, stderr
+from select import select
+
+from os.path import basename
+from os import (
+    getenv, unsetenv,
+    isatty, dup,
+    close as osclose,
+    EX_OK as EXIT_SUCCESS,
+    EX_SOFTWARE as EXIT_FAILURE,
+)
+
+###
+
+def err(*args, **kwargs):
+    print(*args, file=stderr, **kwargs)
+
+def bomb(*args, **kwargs):
+    err(*args, **kwargs)
+    exit(EXIT_FAILURE)
+
+###
+
+def process_args():
+
+    global args
+
+    def usagex(*args, **kwargs):
+        nonlocal p
+        p.print_help(file=stderr)
+        print(file=stderr)
+        bomb(*args, **kwargs)
+
+    def addopt(p, flagchar, longopt, help=None, /, **kwargs):
+        options = list(("-%s --%s" % (flagchar, longopt)).split())
+        p.add_argument(*options, help=help, **kwargs)
+
+    def addarg(p, vname, vdesc, help=None, /, **kwargs):
+        p.add_argument(vname, help=help, **kwargs)
+
+    def addnarg(*args, **kwargs):
+        addarg(*args, nargs='?', **kwargs)
+
+    def addflag(*args, **kwargs):
+        addopt(*args, action='store_true', **kwargs)
+
+    p = argparse.ArgumentParser(
+        prog            = invname,
+        description     = __doc__.strip(),
+        allow_abbrev    = False,
+        formatter_class = argparse.RawTextHelpFormatter,
+    )
+    addnarg(p, 'cutoff', 'if given, longer length words are discarded')
+    addflag(p, '1', 'recol1', 'fold input lines on any whitespace')
+    addflag(p, '2', 'recol2', 'fold on 2+ spaces, or any number of tabs')
+    addflag(p, 'r', 'reverse', 'print in descending order')
+
+    args = p.parse_args(args)
+
+    if exitmsg := globals().get('early_exit'):
+        usagex(exitmsg)
+
+    if (args.recol1 and args.recol2):
+        bomb('only one recolumnate option can be set')
+
+    if n := args.cutoff:
+        try: n = int(n)
+        except ValueError: bomb('cutoff arg must be an integer')
+        args.cutoff = n
+
+###
+
+def lensort():
+    lines = [line.rstrip() for line in infile.read().splitlines()]
+    pattern = (
+        r'\s+' if args.recol1
+        else r'\x20{2,}|\t+' if args.recol2
+        else None
+    )
+    if pattern:
+        out = []
+        for line in lines:
+            splat = re.split(pattern, line)
+            out += splat
+    else:
+        out = lines
+
+    if n := args.cutoff:
+        out = filter(lambda s: len(s) <= n, out)
+
+    for line in sorted(out, key=len, reverse=args.reverse):
+        print(line)
+
+###
+
+def main():
+
+    if debug == 1:
+        breakpoint()
+
+    process_args()
+
+    try: subprogram = globals()[invname]
+    except (KeyError, TypeError):
+        from inspect import trace
+        if len(trace()) == 1: bomb("unimplemented")
+        else: raise
+
+    return subprogram()
+
+###
+
+if __name__ == "__main__":
+
+    invname = basename(argv[0])
+    args = argv[1:]
+
+    # move stdin, pdb needs stdio fds itself
+    stdinfd = stdin.fileno()
+    if not isatty(stdinfd):
+        try:
+            if select([stdin], [], [])[0]:
+                infile = open(dup(stdinfd))
+                osclose(stdinfd)  # cpython bug 73582
+                try: stdin = open('/dev/tty')
+                except: pass  # no ctty, but then pdb would not be in use
+        except KeyboardInterrupt:
+            bomb("interrupted")
+    else:
+        early_exit = "must supply input on stdin"
+
+    from bdb import BdbQuit
+    if debug := int(getenv('DEBUG') or 0):
+        import pdb
+        from pprint import pp
+        err('debug: enabled')
+        unsetenv('DEBUG')  # otherwise forked children hang
+
+    try: main()
+    except BdbQuit: bomb("debug: stop")
+    except SystemExit: raise
+    except KeyboardInterrupt: bomb("interrupted")
+    except:
+        from traceback import print_exc
+        print_exc(file=stderr)
+        if debug: pdb.post_mortem()
+        else: bomb("aborting...")
+    finally:  # cpython bug 55589
+        try: stdout.flush()
+        finally:
+            try: stdout.close()
+            finally:
+                try: stderr.flush()
+                except: pass
+                finally: stderr.close()
