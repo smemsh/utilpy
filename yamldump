@@ -37,6 +37,10 @@ def main():
     if (nargs == 0):
         usagex()
 
+    # don't crash on ansible files with vaulted values, pass as strings
+    yaml.SafeLoader.add_constructor('!vault', lambda loader, node:
+                                    loader.construct_scalar(node))
+
     for filename in args:
         try:
             with open(filename, "r") as f:
