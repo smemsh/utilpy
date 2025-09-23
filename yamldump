@@ -45,8 +45,8 @@ def main():
         try:
             with open(filename, "r") as f:
                 contents = f.read()
-            yamlstr = yaml.safe_load_all(contents)
-            pp(yamlstr)
+            for yamlstr in yaml.safe_load_all(contents):
+                pp(yamlstr)
 
         except FileNotFoundError:
             print("{}: {}: nsfod".format(invname, filename))
