@@ -24,6 +24,7 @@ count lines in files
 
 from sys import argv, stdin
 from os import environ
+from os import EX_OK as EXIT_SUCCESS, EX_SOFTWARE as EXIT_FAILURE
 
 ###
 
@@ -79,7 +80,7 @@ def main():
 
             except FileNotFoundError:
                 print("{}: {}: nsfod".format(invname, file))
-                raise
+                exit(EXIT_FAILURE)
 
             except:
                 print("{}: unhandled".format(invname))
