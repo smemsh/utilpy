@@ -6,7 +6,7 @@ Collection of shell utilities, written in Python.
 (once they become large or more useful, they will probably get moved to
 their own repositories)
 
-| scott@smemsh.net
+| Scott Mcdermott <scott@smemsh.net>
 | https://github.com/smemsh/utilpy/
 | https://spdx.org/licenses/GPL-2.0
 
@@ -67,8 +67,31 @@ count
 
 Counts lines in the standard input, or the given files.
 
-- equivalent to wc -l (different output format if files given)
-- 5x slower than C version (wc -l) in measurements, python-3.9.5
+- equivalent to `wc -l` (different output format if files given)
+- 5x slower than C version (`wc -l`) in measurements, python-3.9.5
+
+
+hostfill
+------------------------------------------------------------------------------
+
+Looks for ipv4 addresses in the input and replaces with their
+looked up name from `gethostbyaddr()` in the output.
+
+
+lensort
+------------------------------------------------------------------------------
+
+Sorts the input by line length, with a configurable filter length.
+
+
+urlcode
+------------------------------------------------------------------------------
+
+Provides the `urlencode` and `urldecode` commands, which take
+all lines of standard input, and all words given in their
+argument vector, and either encode or decode them for the http
+url schemes, according to the rules specified in RFC3986 (via
+`urllib.parse`).
 
 
 pypath
