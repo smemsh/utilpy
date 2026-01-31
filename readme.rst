@@ -53,6 +53,16 @@ also:
 https://en.wikipedia.org/wiki/Password_strength
 
 
+chromebak
+------------------------------------------------------------------------------
+
+dump chrome browser login data/passwords, stored as type=basic v10 records.
+
+args: by default, tries to open the Brave profile named ``Default``,
+otherwise give path to the profile's ``Login Data`` file if using
+different browser variant (like Chrome or Chromium).
+
+
 yamldump
 ------------------------------------------------------------------------------
 

@@ -1,0 +1,379 @@
+#!/usr/bin/env python3
+"""
+chromebak
+ dumps chrome passwords from the 'Login Data' sqlite3 db given as only arg
+
+desc:
+  - makes a dump of important fields in login data stored in db rows
+  - only works on values with first 3 bytes "v10" and os_crypt type "basic"
+  - embeds a small pure python aes for 'password_value' field decrypt
+  - no external libraries required
+
+note:
+  - will not work with dbus org.freedesktop.secrets providers
+  - do not run on systems that use kwallet/gnome-keyring/keepassxc
+  - can force bypass by starting chrome with --password-store=basic
+  - note: untested what happens to old secrets when backend changes
+
+"""
+__url__     = 'https://github.com/smemsh/utilpy/'
+__author__  = 'Scott Mcdermott <scott@smemsh.net>'
+__license__ = 'GPL-2.0'
+__devskel__ = '0.8.1'
+
+from sys import exit, hexversion
+if hexversion < 0x030900f0: exit("minpython: %s" % hexversion)
+
+import argparse
+
+from sys import argv, stdout, stderr
+from copy import copy
+from sqlite3 import connect
+from hashlib import pbkdf2_hmac
+from datetime import datetime, timedelta
+from subprocess import check_output
+from dataclasses import dataclass, fields
+from collections import deque
+
+from os.path import basename, expanduser
+from urllib.parse import quote as urlquote
+
+from os import getenv, unsetenv
+from os import EX_OK as EXIT_SUCCESS, EX_SOFTWARE as EXIT_FAILURE
+
+# components/os_crypt/async/browser/posix_key_provider.cc
+iters   = 1
+blksz   = 16
+secpfx  = b'v10'
+secret  = b'peanuts'
+salt    = b'saltysalt'
+iv      = b"\x20" * blksz
+
+# sqlite3 login database file to open, override via argv1
+DFLTPRF = 'Default'
+DFLTDB  = f"~/.config/BraveSoftware/Brave-Browser/{DFLTPRF}/Login Data"
+
+# desired fields to dump from reach row in login table
+@dataclass
+class Login:
+    origin_url: str
+    action_url: str
+    username_value: str
+    password_value: str
+    password_type: int
+    date_created: int
+    date_last_used: int
+    date_last_filled: int
+    date_password_modified: int
+    times_used: int
+
+###
+
+def err(*args, **kwargs):
+    print(*args, file=stderr, **kwargs)
+
+def bomb(*args, **kwargs):
+    err(*args, **kwargs)
+    exit(EXIT_FAILURE)
+
+def exe(cmd, **kwargs):
+    return check_output(cmd, text=True, **kwargs).splitlines()
+
+###
+
+def process_args():
+
+    global args
+
+    def usagex(*args, **kwargs):
+        p.print_help(file=stderr)
+        print(file=stderr)
+        bomb(*args, **kwargs)
+
+    def addarg(p, vname, vdesc, help=None, /, **kwargs):
+        p.add_argument(vname, metavar=vdesc, help=help, **kwargs)
+
+    def addnarg(*args, **kwargs):
+        addarg(*args, nargs='?', **kwargs)
+
+    p = argparse.ArgumentParser(
+        prog            = invname,
+        description     = __doc__.strip(),
+        allow_abbrev    = False,
+        formatter_class = argparse.RawTextHelpFormatter,
+    )
+    dfltdb = expanduser(DFLTDB)
+    addnarg(p, 'dbfile', 'Login Data file (default brave)', default=dfltdb)
+    args = p.parse_args(args)
+
+    return args.dbfile
+
+###
+
+# date values are stored in 1us intervals since the windows epoch
+def webkit_to_timefmt(t):
+    epoch = datetime(1601, 1, 1)
+    since = timedelta(microseconds=int(t))
+    stamp = epoch + since
+    return stamp.strftime("%Y%m%d%H%M%S")
+
+
+def chromebak(dbfile):
+
+    # chrome can have db open in exclusive mode, so queries are impossible,
+    # even .dump and .backup fail with busy error 5.  immutable works, but
+    # writes could be ongoing.  copy dbfile works, but copy not atomic either.
+    # reflink should be atomic, but is not available on ext4.  nolock=1 seems
+    # to work, and from description still accounts for other writers.
+    #
+    dburl = f"file://{urlquote(dbfile)}?nolock=1"
+    cursor = connect(dburl, uri=True).cursor()
+
+    # only the one table with passwords is interesting, we can always
+    # reconstruct the json import format from it, main purpose is backup.
+    #
+    columns = [f.name for f in fields(Login)]
+    logins = cursor.execute(f"SELECT {','.join(columns)} FROM logins")
+
+    for login in [Login(*l) for l in logins]:
+        for field in fields(login):
+            name = field.name
+            val = getattr(login, name)
+            if field.type is str and not val: continue
+
+            if name.startswith('date_') and field.type is int:
+                if val == 0: continue
+                else: val = webkit_to_timefmt(val)
+
+            elif name == 'password_value' and field.type is str:
+                if not val.startswith(secpfx):
+                    bomb(f"unhandled secret prefix {val[:len(secpfx)]}")
+                val = val[len(secpfx):]
+                # https://gist.github.com/nomius/f7902061b4876c844aa3fc0bfdb5a94c
+                key = pbkdf2_hmac('sha1', secret, salt, iters, blksz)
+                decrypted = AES(key).decrypt_cbc(val, iv)
+                try: val = decrypted[:-decrypted[-1]].decode('utf8')
+                except: val = 'ERROR'
+
+            print(f"{name}: {val}")
+
+        print()
+        continue
+
+###
+
+# pure python aes snarfed from https://github.com/boppreh/aes/, kept only
+# cbc/nohmac/nosalt/nopad, removed comments, moved all code to the class.
+# replaced hardcoded affine, s-box and round tables with computed versions for
+# brevity, from https://gist.github.com/jeetsukumaran/1291836
+#
+class AES:
+    rounds_by_key_size = {16: 10, 24: 12, 32: 14}
+
+    alog = [1]
+    for i in range(255):
+        j = (alog[-1] << 1) ^ alog[-1]
+        if j & 0x100 != 0: j ^= 0x11B
+        alog.append(j)
+    log = [0] * 256
+    for i in range(1, 255):
+        log[alog[i]] = i
+
+    r_con = [0, 1]
+    while len(r_con) < 32:
+        r_con += [alog[(log[2 & 0xFF] + log[r_con[-1] & 0xFF]) % 255]]
+
+    A = [dq := deque(a := [1] * 5 + [0] * 3)]
+    while True:  # 1111000 ROR until loop
+        dq.rotate()
+        if list(cur := dq.copy()) == a: break
+        A += [cur]
+    B = [0, 1, 1, 0, 0, 0, 1, 1]
+
+    box = [[0] * 8 for i in range(256)]
+    box[1][7] = 1
+    for i in range(2, 256):
+        j = alog[255 - log[i]]
+        for t in range(8):
+            box[i][t] = (j >> (7 - t)) & 0x01
+
+    cox = [[0] * 8 for i in range(256)]
+    for i in range(256):
+        for t in range(8):
+            cox[i][t] = B[t]
+            for j in range(8):
+                cox[i][t] ^= A[t][j] * box[i][j]
+
+    s_box = bytearray(256)
+    inv_s_box = copy(s_box)
+    for i in range(256):
+        s_box[i] = cox[i][0] << 7
+        for t in range(1, 8):
+            s_box[i] ^= cox[i][t] << (7 - t)
+        inv_s_box[s_box[i] & 0xFF] = i
+
+    def __init__(self, master_key):
+
+        assert len(master_key) in AES.rounds_by_key_size
+        self.n_rounds = AES.rounds_by_key_size[len(master_key)]
+        self._key_matrices = self._expand_key(master_key)
+
+    def _expand_key(self, master_key):
+        key_columns = self.bytes2matrix(master_key)
+        itersz = len(master_key) // 4
+
+        i = 1
+        while len(key_columns) < (self.n_rounds + 1) * 4:
+            word = list(key_columns[-1])
+
+            if len(key_columns) % itersz == 0:
+                word.append(word.pop(0))
+                word = [AES.s_box[b] for b in word]
+                word[0] ^= AES.r_con[i]
+                i += 1
+            elif len(master_key) == 32 and len(key_columns) % itersz == 4:
+                word = [AES.s_box[b] for b in word]
+
+            word = self.xor_bytes(word, key_columns[-itersz])
+            key_columns.append(word)
+
+        return [key_columns[4 * i:4 * (i + 1)]
+                for i in range(len(key_columns) // 4)]
+
+    def decrypt_block(self, ciphertext):
+        assert len(ciphertext) == 16
+
+        cipher_state = self.bytes2matrix(ciphertext)
+
+        self.add_round_key(cipher_state, self._key_matrices[-1])
+        self.inv_shift_rows(cipher_state)
+        self.inv_sub_bytes(cipher_state)
+
+        for i in range(self.n_rounds - 1, 0, -1):
+            self.add_round_key(cipher_state, self._key_matrices[i])
+            self.inv_mix_columns(cipher_state)
+            self.inv_shift_rows(cipher_state)
+            self.inv_sub_bytes(cipher_state)
+
+        self.add_round_key(cipher_state, self._key_matrices[0])
+
+        return self.matrix2bytes(cipher_state)
+
+    def decrypt_cbc(self, ciphertext, iv):
+        blocks = []
+        previous = iv
+        for ciphertext_block in self.split_blocks(ciphertext):
+            blocks.append(
+                self.xor_bytes(previous, self.decrypt_block(ciphertext_block)))
+            previous = ciphertext_block
+
+        return b''.join(blocks)
+
+    def inv_sub_bytes(self, s):
+        for i in range(4):
+            for j in range(4):
+                s[i][j] = AES.inv_s_box[s[i][j]]
+
+    @staticmethod
+    def inv_shift_rows(s):
+        s[0][1], s[1][1], s[2][1], s[3][1] = s[3][1], s[0][1], s[1][1], s[2][1]
+        s[0][2], s[1][2], s[2][2], s[3][2] = s[2][2], s[3][2], s[0][2], s[1][2]
+        s[0][3], s[1][3], s[2][3], s[3][3] = s[1][3], s[2][3], s[3][3], s[0][3]
+
+    @staticmethod
+    def add_round_key(s, k):
+        for i in range(4):
+            for j in range(4):
+                s[i][j] ^= k[i][j]
+
+    def mix_single_column(self, a):
+        t = a[0] ^ a[1] ^ a[2] ^ a[3]
+        u = a[0]
+        a[0] ^= t ^ self.xtime(a[0] ^ a[1])
+        a[1] ^= t ^ self.xtime(a[1] ^ a[2])
+        a[2] ^= t ^ self.xtime(a[2] ^ a[3])
+        a[3] ^= t ^ self.xtime(a[3] ^ u)
+
+    def mix_columns(self, s):
+        for i in range(4):
+            self.mix_single_column(s[i])
+
+    def inv_mix_columns(self, s):
+        for i in range(4):
+            u = self.xtime(self.xtime(s[i][0] ^ s[i][2]))
+            v = self.xtime(self.xtime(s[i][1] ^ s[i][3]))
+            s[i][0] ^= u
+            s[i][1] ^= v
+            s[i][2] ^= u
+            s[i][3] ^= v
+
+        self.mix_columns(s)
+
+    @staticmethod
+    def bytes2matrix(text):
+        return [list(text[i:i + 4]) for i in range(0, len(text), 4)]
+
+    @staticmethod
+    def matrix2bytes(matrix):
+        return bytes(sum(matrix, []))
+
+    @staticmethod
+    def xor_bytes(a, b):
+        return bytes(i ^ j for i, j in zip(a, b))
+
+    @staticmethod
+    def split_blocks(message, block_size=16, require_padding=True):
+        assert len(message) % block_size == 0 or not require_padding
+        return [message[i:i + 16] for i in range(0, len(message), block_size)]
+
+    @staticmethod
+    def xtime(a):
+        return (((a << 1) ^ 0x1B) & 0xFF) if (a & 0x80) else (a << 1)
+
+###
+
+def main():
+
+    if debug == 1:
+        breakpoint()
+
+    dbfile = process_args()
+
+    try: subprogram = globals()[invname]
+    except (KeyError, TypeError):
+        from inspect import trace
+        if len(trace()) == 1: bomb("unimplemented")
+        else: raise
+
+    return subprogram(dbfile)
+
+
+if __name__ == "__main__":
+
+    invname = basename(argv[0])
+    args = argv[1:]
+
+    from bdb import BdbQuit
+    if debug := int(getenv('DEBUG') or 0):
+        import pdb
+        from pprint import pp
+        err('debug: enabled')
+        unsetenv('DEBUG')  # otherwise forked children hang
+
+    try: main()
+    except BdbQuit: bomb("debug: stop")
+    except SystemExit: raise
+    except KeyboardInterrupt: bomb("interrupted")
+    except:
+        from traceback import print_exc
+        print_exc(file=stderr)
+        if debug: pdb.post_mortem()
+        else: bomb("aborting...")
+    finally:  # cpython bug 55589
+        try: stdout.flush()
+        finally:
+            try: stdout.close()
+            finally:
+                try: stderr.flush()
+                except: pass
+                finally: stderr.close()
