@@ -63,7 +63,19 @@ otherwise give path to the profile's ``Login Data`` file if using
 different browser variant (like Chrome or Chromium).
 
 
-yamldump
+
+gkeepbak_
+------------------------------------------------------------------------------
+
+Dump all google keep data to a json file, doing an incremental update
+from the previous state, provided on stdin, writing updated state to
+stdout (to keep for input next time), or empty if no changes.  Intended
+to be run from cron for backing up google keep notes.
+
+.. _gkeepbak: https://github.com/smemsh/utilpy/blob/master/gkeepbak
+
+
+yamldump_
 ------------------------------------------------------------------------------
 
 Pretty prints yaml files as python objects.
