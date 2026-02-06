@@ -35,19 +35,14 @@ if hexversion < 0x030900f0: exit("minpython: %s" % hexversion)
 
 from sys import argv, stdin, stdout, stderr
 from select import select
-from functools import partial
 
-from json.decoder import JSONDecodeError
 from json import dump, load
+from json.decoder import JSONDecodeError
 
+from os import getenv, unsetenv, isatty, dup, devnull
+from os import close as osclose
+from os import EX_SOFTWARE as EXIT_FAILURE
 from os.path import basename
-from os import (
-    getenv, unsetenv,
-    isatty, dup, devnull,
-    close as osclose,
-    EX_OK as EXIT_SUCCESS,
-    EX_SOFTWARE as EXIT_FAILURE,
-)
 
 import gkeepapi
 
