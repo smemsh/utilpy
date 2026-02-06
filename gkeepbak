@@ -19,7 +19,7 @@ usage:
   | GKEEPBAK_EMAIL=scott@smemsh.net \
     GKEEPBAK_TOKEN="$(<~/secrets/gkeepapi)" \
     gkeepbak \
-  > state-`date +\%Y\%m\%d\%H\%M\%S`.json
+  > state-`date +%Y%m%d%H%M%S`.json
 
 deps:
   - https://github.com/kiwiz/gkeepapi/
