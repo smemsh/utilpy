@@ -60,8 +60,6 @@ def bomb(*args, **kwargs):
     err(*args, **kwargs)
     exit(EXIT_FAILURE)
 
-warn = err
-
 ###
 
 def gkeepbak():
@@ -73,7 +71,7 @@ def gkeepbak():
 
     try: jsondata = load(infile)
     except JSONDecodeError:
-        warn("initial run, full download")
+        err("initial run, full download")
         jsondata = None
 
     keep.authenticate(email, authtok, state=jsondata)
