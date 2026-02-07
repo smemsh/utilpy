@@ -17,7 +17,7 @@ ____
 ____
 
 
-passgen
+passgen_
 ------------------------------------------------------------------------------
 
 output random password from [[:alnum:]] ^ [0Ol1I], default 128 bits
@@ -52,8 +52,10 @@ also:
 
 https://en.wikipedia.org/wiki/Password_strength
 
+.. _passgen: https://github.com/smemsh/utilpy/blob/master/passgen
 
-chromebak
+
+chromebak_
 ------------------------------------------------------------------------------
 
 dump chrome browser login data/passwords, stored as type=basic v10 records.
@@ -62,6 +64,7 @@ args: by default, tries to open the Brave profile named ``Default``,
 otherwise give path to the profile's ``Login Data`` file if using
 different browser variant (like Chrome or Chromium).
 
+.. _chromebak: https://github.com/smemsh/utilpy/blob/master/chromebak
 
 
 gkeepbak_
@@ -83,8 +86,10 @@ Pretty prints yaml files as python objects.
 | args: any number of yaml files to print
 | todo: optionally pre-pass through jinja2
 
+.. _yamldump: https://github.com/smemsh/utilpy/blob/master/yamldump
 
-count
+
+count_
 ------------------------------------------------------------------------------
 
 Counts lines in the standard input, or the given files.
@@ -92,21 +97,27 @@ Counts lines in the standard input, or the given files.
 - equivalent to `wc -l` (different output format if files given)
 - 5x slower than C version (`wc -l`) in measurements, python-3.9.5
 
+.. _count: https://github.com/smemsh/utilpy/blob/master/count
 
-hostfill
+
+hostfill_
 ------------------------------------------------------------------------------
 
 Looks for ipv4 addresses in the input and replaces with their
 looked up name from `gethostbyaddr()` in the output.
 
+.. _hostfill: https://github.com/smemsh/utilpy/blob/master/hostfill
 
-lensort
+
+lensort_
 ------------------------------------------------------------------------------
 
 Sorts the input by line length, with a configurable filter length.
 
+.. _lensort: https://github.com/smemsh/utilpy/blob/master/lensort
 
-urlcode
+
+urlcode_
 ------------------------------------------------------------------------------
 
 Provides the `urlencode` and `urldecode` commands, which take
@@ -115,8 +126,10 @@ argument vector, and either encode or decode them for the http
 url schemes, according to the rules specified in RFC3986 (via
 `urllib.parse`).
 
+.. _urlcode: https://github.com/smemsh/utilpy/blob/master/urlcode
 
-pypath
+
+pypath_
 ------------------------------------------------------------------------------
 
 Prints ``sys.path`` on separate lines, using interpreter as given in
@@ -133,4 +146,4 @@ example::
  /home/scott/.local/lib/python3.12/site-packages
  /opt/python-3.12.6/lib/python3.12/site-packages
 
-..
+.. _pypath: https://github.com/smemsh/utilpy/blob/master/pypath
