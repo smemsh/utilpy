@@ -70,7 +70,7 @@ def gkeepbak():
         jsondata = None
 
     keep.authenticate(email, authtok, state=jsondata)
-    dump(keep.dump(), stdout)
+    dump(keep.dump(), outfile)
 
 
 def main():
@@ -92,21 +92,30 @@ if __name__ == "__main__":
 
     invname = basename(argv[0])
 
-    # move stdin, pdb needs stdio fds itself
+    outfile = stdout
     stdinfd = stdin.fileno()
-    if not isatty(stdinfd):
+    stdoutfd = stdout.fileno()
+
+    if isatty(stdinfd):
+        # we want either empty or no stdin to trigger json decode error later
+        infile = open(devnull)
+    else:
+        # pdb will need stdio fds, so move and reopen
         try:
             if select([stdin], [], [], 0)[0]:
-                infile = open(dup(stdinfd))
-                osclose(stdinfd)  # cpython bug 73582
-                try: stdin = open('/dev/tty')
-                except: pass  # no ctty, but then pdb would not be in use
+                infile = open(dup(stdinfd), 'r'); osclose(stdinfd)
+                outfile = open(dup(stdoutfd), 'a'); osclose(stdoutfd)
+                try:
+                    # tty must use fd 0/1 for pdb readline, cpython bug 73582
+                    stdin = open('/dev/tty', 'r')
+                    stdout = open('/dev/tty', 'a')
+                except:
+                    pass  # no ctty, but then pdb would not be in use
             else:
                 bomb("must supply json or empty data on stdin")
+
         except KeyboardInterrupt:
             bomb("interrupted")
-    else:
-        infile = open(devnull)
 
     from bdb import BdbQuit
     if debug := int(getenv('DEBUG') or 0):
@@ -125,9 +134,13 @@ if __name__ == "__main__":
         if debug: pdb.post_mortem()
         else: bomb("aborting...")
     finally:  # cpython bug 55589
-        try: stdout.flush()
+        try:
+            outfile.flush()
+            stdout.flush()
         finally:
-            try: stdout.close()
+            try:
+                outfile.close()
+                stdout.close()
             finally:
                 try: stderr.flush()
                 except: pass
