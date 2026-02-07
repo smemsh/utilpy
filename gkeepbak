@@ -13,6 +13,7 @@ desc:
 
 usage:
   trap 'echo "gkeepapi cron failure"' err
+  umask 077
   set -e
   cd ~/var/gkeepapi
   state=($(compgen -G state-'20????????????.json')) || true
