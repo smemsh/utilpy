@@ -20,7 +20,7 @@ ____
 passgen_
 ------------------------------------------------------------------------------
 
-output random password from [[:alnum:]] ^ [0Ol1I], default 128 bits
+Output random password from [[:alnum:]] ^ [0Ol1I], default 128 bits
 
 - generates a random password with specifiable entropy
 - chars: a-z, A-Z, 0-9, except: 0, O, l, 1, I (== 57 possible)
@@ -28,11 +28,11 @@ output random password from [[:alnum:]] ^ [0Ol1I], default 128 bits
 - uses python random.SystemRandom (on linux, os.urandom())
 - uses random.choice() to map into range of suitable characters
 
-args:
+Args:
 
 - arg1: number of bits of entropy the secret should have, default 128
 
-calculation::
+Calculation::
 
  passlen = 22
  setsize = len([[:alnum:]]) - 5 # ([^0Ol1I])
@@ -58,9 +58,9 @@ https://en.wikipedia.org/wiki/Password_strength
 chromebak_
 ------------------------------------------------------------------------------
 
-dump chrome browser login data/passwords, stored as type=basic v10 records.
+Dump chrome browser login data/passwords, stored as type=basic v10 records.
 
-args: by default, tries to open the Brave profile named ``Default``,
+Args: by default, tries to open the Brave profile named ``Default``,
 otherwise give path to the profile's ``Login Data`` file if using
 different browser variant (like Chrome or Chromium).
 
