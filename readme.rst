@@ -82,17 +82,6 @@ Pretty prints yaml files as python objects.
 .. _yamldump: https://github.com/smemsh/utilpy/blob/master/yamldump
 
 
-count_
-------------------------------------------------------------------------------
-
-Counts lines in the standard input, or the given files.
-
-- equivalent to `wc -l` (different output format if files given)
-- 5x slower than C version (`wc -l`) in measurements, python-3.9.5
-
-.. _count: https://github.com/smemsh/utilpy/blob/master/count
-
-
 hostfill_
 ------------------------------------------------------------------------------
 
