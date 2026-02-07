@@ -43,13 +43,6 @@ Calculation::
          = 22 * (ln(57) / ln(2))
          = 128.3235803212
 
-todo:
-
-- allow to specify length instead of computing by entropy
-- allow to specify character set
-
-also:
-
 https://en.wikipedia.org/wiki/Password_strength
 
 .. _passgen: https://github.com/smemsh/utilpy/blob/master/passgen
