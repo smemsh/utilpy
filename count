@@ -93,10 +93,10 @@ def countlines_chunks(file):
 
 
 def countlines_loop(file):
-    count = 0
+    lines = 0
     for _ in file:
-        count += 1
-    return count
+        lines += 1
+    return lines
 
 
 def count(files):
