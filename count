@@ -40,7 +40,6 @@ from os import (
 
 ###
 
-
 def err(*args, **kwargs):
     print(*args, file=stderr, **kwargs)
 
@@ -84,7 +83,16 @@ def process_args():
 
 ###
 
-def countlines(file):
+def countlines_chunks(file):
+    lines = 0
+    buf = b''
+    sz = 64 * 1024  # see performance tables at EOF
+    while buf := file.read(sz):
+        lines += buf.count(b'\n')
+    return lines
+
+
+def countlines_loop(file):
     count = 0
     for _ in file:
         count += 1
@@ -105,7 +113,7 @@ def count(files):
             # stdin comes as BufferedReader, give a pseudonym for output
             name = '/dev/stdin'
 
-        out = str(countlines(file))
+        out = str(countlines_chunks(file))
         if multi: out = f"{name}: {out}"
 
         print(out)
@@ -171,3 +179,88 @@ if __name__ == "__main__":
                 try: stderr.flush()
                 except: pass
                 finally: stderr.close()
+
+### EOF ######################################################################
+#
+# testfile: 2086680000 line 19G /usr/share/dict/words compilation
+#
+# best c, user+sys = 9.17 (1.0x)
+# best py, user+sys = 70.69 (4.7x)
+# naive js, user+sys = 135.98 (9.0x)
+# naive py, user+sys = 302.54 (20.1x)
+#
+# glibc-wc    14.53 real    0.49 user      8.68  sys <-- best
+# pyio-64k    42.10 real    28.59 user     7.78  sys <-- best-py-cat
+# pyio-text   156.73 real   145.81 user    9.49  sys
+#
+# # pyio-buf bytes.count() chunks, read from stdin, supplied by cat
+# 512         49.99 real    39.38 user     9.51  sys
+# 1k          47.08 real    35.64 user     9.72  sys
+# 2k          45.98 real    33.48 user    10.01  sys
+# 4k          43.88 real    31.74 user     9.22  sys
+# 8k          42.27 real    29.78 user     8.55  sys
+# 16k         43.08 real    29.24 user     8.70  sys
+# 32k         42.98 real    29.29 user     8.01  sys
+# 64k         42.10 real    28.59 user     7.78  sys <-- best-py-cat
+# 128k        42.10 real    28.22 user     7.90  sys
+# 256k        57.13 real    29.43 user     8.91  sys
+# 512k        57.14 real    28.88 user     9.11  sys
+# 1M          54.99 real    27.43 user     9.53  sys
+# 128M        44.13 real    24.00 user    16.35  sys
+#
+# # python print(sum(1 for l in f)):
+# sum-file   142.87 real   133.64 user     8.97  sys
+#
+# # pyio-buf supplied by dd in same-size buffers on stdin:
+# dd-bs-1M    39.11 real    29.09 user     4.66  sys <-- best-py-dd
+#
+# # js: loop on process.stdin.on('data') buffers counting newlines:
+# # for (let i = 0; i < buf.length; i++) if (buf[i] === 10) lines++
+# nodejs      78.32 real    57.66 user    15.49  sys
+#
+# todo: different algorithm for regular file vs stdin
+# todo: try using mmap() on regular files
+# todo: embed other langs via ffi? but then needs build/pkg
+# todo: multiprocess chunks for larger seekable files
+# todo: one process per file
+# testfile: 2086680000 line 19G /usr/share/dict/words compilation
+#
+# best c, user+sys = 9.17 (1.0x)
+# best py, user+sys = 70.69 (4.7x)
+# naive js, user+sys = 135.98 (9.0x)
+# naive py, user+sys = 302.54 (20.1x)
+#
+# glibc-wc    14.53 real    0.49 user      8.68  sys <-- best
+# pyio-64k    42.10 real    28.59 user     7.78  sys <-- best-py-cat
+# pyio-text   156.73 real   145.81 user    9.49  sys
+#
+# # pyio-buf bytes.count() chunks, read from stdin, supplied by cat
+# 512         49.99 real    39.38 user     9.51  sys
+# 1k          47.08 real    35.64 user     9.72  sys
+# 2k          45.98 real    33.48 user    10.01  sys
+# 4k          43.88 real    31.74 user     9.22  sys
+# 8k          42.27 real    29.78 user     8.55  sys
+# 16k         43.08 real    29.24 user     8.70  sys
+# 32k         42.98 real    29.29 user     8.01  sys
+# 64k         42.10 real    28.59 user     7.78  sys <-- best-py-cat
+# 128k        42.10 real    28.22 user     7.90  sys
+# 256k        57.13 real    29.43 user     8.91  sys
+# 512k        57.14 real    28.88 user     9.11  sys
+# 1M          54.99 real    27.43 user     9.53  sys
+# 128M        44.13 real    24.00 user    16.35  sys
+#
+# # python print(sum(1 for l in f)):
+# sum-file   142.87 real   133.64 user     8.97  sys
+#
+# # pyio-buf supplied by dd in same-size buffers on stdin:
+# dd-bs-1M    39.11 real    29.09 user     4.66  sys <-- best-py-dd
+#
+# # js: loop on process.stdin.on('data') buffers counting newlines:
+# # for (let i = 0; i < buf.length; i++) if (buf[i] === 10) lines++
+# nodejs      78.32 real    57.66 user    15.49  sys
+#
+# todo: different algorithm for regular file vs stdin
+# todo: try using mmap() on regular files
+# todo: embed other langs via ffi? but then needs build/pkg
+# todo: multiprocess chunks for larger seekable files
+# todo: one process per file
