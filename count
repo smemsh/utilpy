@@ -121,7 +121,7 @@ def main():
     try: subprogram = globals()[invname]
     except (KeyError, TypeError):
         from inspect import trace
-        if len(trace()) == 1: bomb("unimplemented")
+        if len(trace()) == 1: bomb('unimplemented')
         else: raise
 
     return subprogram(files)
