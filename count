@@ -1,110 +1,167 @@
 #!/usr/bin/env python3
-#
-# count
-#   counts lines in the standard input, or the given files
-#
-# desc:
-#   - equivalent to wc -l (different output format if files given)
-#   - 5x slower than C version (wc -l) in measurements, python-3.9.5
-#
-# status:
-#   - experiment to determine python's speed with simple IO loop + counter
-#   - not very fast! using mmap supposedly doubles, but still... unimpressive
-#
-# scott@smemsh.net
-# https://github.com/smemsh/utilpy/
-# https://spdx.org/licenses/GPL-2.0
-#
-##############################################################################
 """
-count lines in files
-    counts number of lines on stdin, or:
-    if args supplied, gives "filename: count" for each
-"""
+count
+  counts lines in files and standard input
 
-from sys import argv, stdin
-from os import environ
-from os import EX_OK as EXIT_SUCCESS, EX_SOFTWARE as EXIT_FAILURE
+usage:
+  - counts number of lines in stdin if supplied, and also in files from args
+  - if args supplied, gives "filename: count" for each, and also for stdin
+
+desc:
+  - experiment to determine python's speed compared to other languages
+  - 4.7x processor usage (user+sys) over C version (wc -l), python-3.13
+  - not very fast! using mmap supposedly doubles, but still... unimpressive
+
+"""
+__url__     = 'https://github.com/smemsh/utilpy/'
+__author__  = 'Scott Mcdermott <scott@smemsh.net>'
+__license__ = 'GPL-2.0'
+__devskel__ = '0.8.1'
+
+from sys import exit, hexversion
+if hexversion < 0x030900f0: exit("minpython: %s" % hexversion)
+
+import argparse
+
+from sys import argv, stdin, stdout, stderr
+from select import select
+
+from os.path import basename
+from os import (
+    access,
+    getenv, unsetenv,
+    isatty, dup,
+    R_OK,
+    close as osclose,
+    EX_OK as EXIT_SUCCESS,
+    EX_SOFTWARE as EXIT_FAILURE,
+)
 
 ###
 
-def usagex():
 
-    print("{}:".format(invname), __doc__.strip())
-    quit()
+def err(*args, **kwargs):
+    print(*args, file=stderr, **kwargs)
+
+def bomb(*args, **kwargs):
+    err(*args, **kwargs)
+    exit(EXIT_FAILURE)
+
+###
+
+def process_args():
+
+    global args
+
+    def usagex(*args, **kwargs):
+        nonlocal p
+        p.print_help(file=stderr)
+        print(file=stderr)
+        bomb(*args, **kwargs)
+
+    def addarg(p, vname, help=None, /, **kwargs):
+        p.add_argument(vname, help=help, **kwargs)
+
+    def addargs(*args, **kwargs):
+        addarg(*args, nargs='*', **kwargs)
+
+    p = argparse.ArgumentParser(
+        prog            = invname,
+        description     = __doc__.strip(),
+        allow_abbrev    = False,
+        formatter_class = argparse.RawTextHelpFormatter,
+    )
+    addargs(p, 'files', 'files to count besides stdin', default=[])
+
+    args = p.parse_args(args)
+
+    files = []
+    if infile: files += [infile]
+    if args.files: files += args.files
+
+    return files
 
 ###
 
 def countlines(file):
-
     count = 0
     for _ in file:
         count += 1
     return count
 
-###
+
+def count(files):
+    for file in files:
+        if not isinstance(file, str):
+            # stdin comes as already-opened BufferedReader, give a pseudonym
+            name = '/dev/stdin'
+        else:
+            name = file
+            try: file = open(name, 'rb')
+            except FileNotFoundError:
+                print("{}: {}: nsfod".format(invname, name))
+                exit(EXIT_FAILURE)
+        count = countlines(file)
+        print(f'{name}: {count}')
+
 
 def main():
 
-    no_more_options = False
+    if debug == 1:
+        breakpoint()
 
-    if (nargs == 0):
-        print(countlines(stdin.buffer))
+    files = process_args()
 
-    else:
-        files = []
-        for arg in args:
+    try: subprogram = globals()[invname]
+    except (KeyError, TypeError):
+        from inspect import trace
+        if len(trace()) == 1: bomb("unimplemented")
+        else: raise
 
-            if (no_more_options):
-                files.append(arg); continue
+    return subprogram(files)
 
-            elif (arg == '--'):
-                no_more_options = True; continue
-
-            elif (arg == '-h' or arg == '--help'):
-                usagex()
-
-            elif (arg[0] == '-'):
-                print("{}: opterr".format(invname)); quit()
-
-            else:
-                files.append(arg)
-                no_more_options = True
-
-        for file in files:
-
-            try:
-                with open(file, "rb") as f:
-                    count = countlines(f)
-                    print('{}: {}'.format(file, count))
-
-            except FileNotFoundError:
-                print("{}: {}: nsfod".format(invname, file))
-                exit(EXIT_FAILURE)
-
-            except:
-                print("{}: unhandled".format(invname))
-                raise
 ###
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
 
-    try:
-        if (bool(environ['DEBUG'])):
-            debug = True
-            import pdb
-            from pprint import pprint as pp
-            pp('debug-mode-enabled')
-            pdb.set_trace()
-        else:
-            raise KeyError
-
-    except KeyError:
-        debug = False
-
-    invname = argv[0]
+    invname = basename(argv[0])
     args = argv[1:]
-    nargs = len(args)
 
-    main()
-#
+    # move stdin, pdb needs stdio fds itself
+    stdinfd = stdin.fileno()
+    if isatty(stdinfd):
+        infile = None
+    else:
+        try:
+            if select([stdin], [], [])[0]:
+                infile = open(dup(stdinfd), 'rb')
+                osclose(stdinfd)  # cpython bug 73582
+                try: stdin = open('/dev/tty')
+                except: pass  # no ctty, but then pdb would not be in use
+        except KeyboardInterrupt:
+            bomb("interrupted")
+
+    from bdb import BdbQuit
+    if debug := int(getenv('DEBUG') or 0):
+        import pdb
+        from pprint import pp
+        err('debug: enabled')
+        unsetenv('DEBUG')  # otherwise forked children hang
+
+    try: main()
+    except BdbQuit: bomb("debug: stop")
+    except SystemExit: raise
+    except KeyboardInterrupt: bomb("interrupted")
+    except:
+        from traceback import print_exc
+        print_exc(file=stderr)
+        if debug: pdb.post_mortem()
+        else: bomb("aborting...")
+    finally:  # cpython bug 55589
+        try: stdout.flush()
+        finally:
+            try: stdout.close()
+            finally:
+                try: stderr.flush()
+                except: pass
+                finally: stderr.close()
