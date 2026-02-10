@@ -6,6 +6,7 @@ count
 usage:
   - counts number of lines in stdin if supplied, and also in files from args
   - if args supplied, gives "filename: count" for each, and also for stdin
+  - for single file or stdin only, no filename printed, only count
 
 desc:
   - experiment to determine python's speed compared to other languages
@@ -91,18 +92,23 @@ def countlines(file):
 
 
 def count(files):
+    multi = len(files) > 1
     for file in files:
-        if not isinstance(file, str):
-            # stdin comes as already-opened BufferedReader, give a pseudonym
-            name = '/dev/stdin'
-        else:
+        if isinstance(file, str):
+            # filename strings were given in the argument vector
             name = file
             try: file = open(name, 'rb')
             except FileNotFoundError:
                 print("{}: {}: nsfod".format(invname, name))
                 exit(EXIT_FAILURE)
-        count = countlines(file)
-        print(f'{name}: {count}')
+        else:
+            # stdin comes as BufferedReader, give a pseudonym for output
+            name = '/dev/stdin'
+
+        out = str(countlines(file))
+        if multi: out = f"{name}: {out}"
+
+        print(out)
 
 
 def main():
