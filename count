@@ -106,8 +106,10 @@ def count(files):
             # filename strings were given in the argument vector
             name = file
             try: file = open(name, 'rb')
-            except FileNotFoundError:
-                print("{}: {}: nsfod".format(invname, name))
+            except PermissionError: errstr = "denied"
+            except FileNotFoundError: errstr = "nsfod"
+            finally:
+                err(f"{name}: {errstr}")
                 exit(EXIT_FAILURE)
         else:
             # stdin comes as BufferedReader, give a pseudonym for output
