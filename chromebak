@@ -53,7 +53,7 @@ iv      = b"\x20" * blksz
 DFLTPRF = 'Default'
 DFLTDB  = f"~/.config/BraveSoftware/Brave-Browser/{DFLTPRF}/Login Data"
 
-# desired fields to dump from reach row in login table
+# desired fields to dump from each row in login table
 @dataclass
 class Login:
     origin_url: str
