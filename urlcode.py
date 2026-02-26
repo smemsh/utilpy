@@ -25,17 +25,11 @@ from re import match
 from sys import argv, stdin, stdout, stderr
 from select import select
 
-from urllib.parse import quote, unquote
-from functools import wraps
+from os import getenv, unsetenv, isatty, dup
+from os import close as osclose, EX_SOFTWARE as EXIT_FAILURE
 
 from os.path import basename
-from os import (
-    getenv, unsetenv,
-    isatty, dup,
-    close as osclose,
-    EX_OK as EXIT_SUCCESS,
-    EX_SOFTWARE as EXIT_FAILURE,
-)
+from urllib.parse import quote, unquote
 
 ###
 
@@ -51,12 +45,6 @@ def bomb(*args, **kwargs):
 def process_args():
 
     global args
-
-    def usagex(*args, **kwargs):
-        nonlocal p
-        p.print_help(file=stderr)
-        print(file=stderr)
-        bomb(*args, **kwargs)
 
     # parse_args() gives escaped strings
     def unesc(s):
@@ -93,8 +81,8 @@ def process_args():
 
 ###
 
-urlencode = lambda s: urlcode(s, quote)
-urldecode = lambda s: urlcode(s, unquote)
+def urlencode(s): urlcode(s, quote)
+def urldecode(s): urlcode(s, unquote)
 def urlcode(strings, callback):
     for s in strings:
         prefix = ''
