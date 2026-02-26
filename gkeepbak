@@ -10,6 +10,7 @@ desc:
   - otherwise, uses api to sync from upstream, does incremental download
   - write new serialized json to stdout (use next time as input)
   - if no changed records, writes nothing to stdout (reader gets EOF)
+  - to avoid crash on empty input, ensure uplink exists in cron job
 
 usage:
   trap 'echo "gkeepapi cron failure"' err
