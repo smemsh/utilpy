@@ -7,19 +7,21 @@ desc:
   - invoke as urlencode or urldecode
   - send as lines on stdin, or pass as cli args, or both
   - result each of each xcoded written as line on stdout
+  - avoids encoding initial scheme://location/ with -a/--all flag
   - uses '%20', not '+', for spaces
 
 """
 __url__     = 'https://github.com/smemsh/utilpy/'
 __author__  = 'Scott Mcdermott <scott@smemsh.net>'
 __license__ = 'GPL-2.0'
-__devskel__ = '0.8.1'
+__devskel__ = '0.9.1'
 
 from sys import exit, hexversion
 if hexversion < 0x030900f0: exit("minpython: %s" % hexversion)
 
 import argparse
 
+from re import match
 from sys import argv, stdin, stdout, stderr
 from select import select
 
@@ -61,8 +63,16 @@ def process_args():
         if s is None: return
         else: return s.encode('raw-unicode-escape').decode('unicode-escape')
 
+    def addopt(p, flagchar, longopt, /, **kwargs):
+        kwargs = {'help': None} | kwargs
+        options = list(("-%s --%s" % (flagchar, longopt)).split())
+        p.add_argument(*options, **kwargs)
+
     def addarg(p, vname, help=None, /, **kwargs):
         p.add_argument(vname, help=help, **kwargs)
+
+    def addflag(*args, **kwargs):
+        addopt(*args, action='store_true', **kwargs)
 
     def addargs(*args, **kwargs):
         addarg(*args, nargs='*', **kwargs)
@@ -74,6 +84,7 @@ def process_args():
         formatter_class = argparse.RawTextHelpFormatter,
     )
 
+    addflag(p, 'a', 'all', help='do not skip scheme/domain of ^https?://.*')
     addargs(p, 'strings', 'string1, string2, ...', metavar='string')
     args = p.parse_args(args)
 
@@ -86,7 +97,12 @@ urlencode = lambda s: urlcode(s, quote)
 urldecode = lambda s: urlcode(s, unquote)
 def urlcode(strings, callback):
     for s in strings:
-        print(callback(s))
+        prefix = ''
+        if not getattr(args, 'all', False):
+            if m := match(r'^(https?|ftp|file)://[^/]+', s):
+                s = s[m.end():]
+                prefix = m[0]
+        print(f"{prefix}{callback(s)}")
 
 
 # todo: for query params, .quote_plus() should be used, will need option
