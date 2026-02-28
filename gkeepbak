@@ -87,8 +87,8 @@ def gkeepbak():
         old = dt.fromisoformat(oldlast)
         new = dt.fromisoformat(newlast)
         stamp = new.strftime('%Y%m%d%H%M%S')
-        since = (new - old).total_seconds() / 60 / 60 / 24
-        err(f"newest: {stamp}, since: {since:.1} days")
+        since = (new - old).total_seconds() / 60 / 60
+        err(f"newest: {stamp}, since: {since:0.2g} hours")
         dump(newdata, outfile)
 
 
