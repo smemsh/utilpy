@@ -105,12 +105,14 @@ def count(files):
         if isinstance(file, str):
             # filename strings were given in the argument vector
             name = file
+            errstr = ""
             try: file = open(name, 'rb')
             except PermissionError: errstr = "denied"
             except FileNotFoundError: errstr = "nsfod"
             finally:
-                err(f"{name}: {errstr}")
-                exit(EXIT_FAILURE)
+                if errstr:
+                    err(f"{name}: {errstr}")
+                    exit(EXIT_FAILURE)
         else:
             # stdin comes as BufferedReader, give a pseudonym for output
             name = '/dev/stdin'
