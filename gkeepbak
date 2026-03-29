@@ -1,30 +1,14 @@
 #!/usr/bin/env python3
 """
 gkeepbak
-  read old gkeepapi json state on stdin, do a sync, write to stdout
+  read old state backup file, sync with api, make new backup
 
 desc:
-  - maintains backups of google keep data
-  - reads previously serialized state from itself on stdin
-  - if nothing on stdin, obtains keep data anew from api (expensive)
+  - maintains zstd-compressed backups of google keep data
+  - globs backup files in arg1 dir, reads most recent serialized state
+  - if no backup files, obtain keep data anew from api (expensive)
   - otherwise, uses api to sync from upstream, does incremental download
-  - write new serialized json to stdout (use next time as input)
-  - if no changed records, writes nothing to stdout (reader gets EOF)
-  - to avoid crash on empty input, ensure uplink exists in cron job
-
-usage:
-  trap 'echo "gkeepapi cron failure"' err
-  umask 077
-  set -e
-  cd ~/var/gkeepapi
-  state=($(compgen -G state-'20????????????.json')) || true
-  newname=state-`date +%Y%m%d%H%M%S`.json
-  cat ${state:-/dev/null} \
-  | GKEEPBAK_EMAIL=scott@smemsh.net \
-    GKEEPBAK_TOKEN="$(<~/secrets/gkeepapi)" \
-    gkeepbak \
-  > .$newname
-  test -s .$newname && mv $newname $newname || rm .$newname
+  - requires $GKEEPBAK_EMAIL for account, $GKEEPBAK_TOKEN for master token
 
 deps:
   - https://github.com/kiwiz/gkeepapi/
@@ -36,18 +20,28 @@ __license__ = 'GPL-2.0'
 __devskel__ = '0.8.1'
 
 from sys import exit, hexversion
-if hexversion < 0x030900f0: exit("minpython: %s" % hexversion)
+if hexversion < 0x030e00f0: exit("minpython: %s" % hexversion)
 
-from sys import argv, stdin, stdout, stderr
+import argparse
+
+from compression import zstd
 from select import select
+from shutil import which
+from glob import glob
+from sys import argv, stdin, stdout, stderr
 
-from json import dump, load
+from json import dumps, load
 from json.decoder import JSONDecodeError
 
-from os import getenv, unsetenv, isatty, dup, devnull
-from os import close as osclose
-from os import EX_SOFTWARE as EXIT_FAILURE
-from os.path import basename
+from os.path import basename, dirname, isdir, exists, abspath
+from os import (
+    getenv, unsetenv,
+    getcwd, chdir, makedirs,
+    access, R_OK, W_OK,
+    close as osclose,
+    EX_OK as EXIT_SUCCESS,
+    EX_SOFTWARE as EXIT_FAILURE,
+)
 
 from datetime import datetime as dt
 
@@ -64,32 +58,91 @@ def bomb(*args, **kwargs):
 
 ###
 
-def gkeepbak():
+def process_args():
+
+    global args
+
+    def addarg(p, vname, help=None, /, **kwargs):
+        p.add_argument(vname, help=help, **kwargs)
+
+    p = argparse.ArgumentParser(
+        prog            = invname,
+        description     = __doc__.strip(),
+        allow_abbrev    = False,
+        formatter_class = argparse.RawTextHelpFormatter,
+    )
+    addarg(p, 'bakdir')
+    args = p.parse_args(args)
+    bakdir = args.bakdir or getcwd()
+
+    return abspath(bakdir.rstrip('/'))
+
+
+def check_sanity(dest):
+
+    if not isdir(dest):
+        bomb(f"backup directory '{dest}' invalid")
+
+    if not exists(dest):
+        try: makedirs(dest)
+        except: bomb(f"backup dir '{dest}' dne or bad mkdir")
+
+    elif not isdir(dest):
+        bomb(f"refusing overwrite of '{dest}' (not a directory)")
+
+    if not access(dest, W_OK):
+        bomb(f"cannot write to destdir '{dest}'")
+
+
+def gkeepbak(bakdir):
 
     (authtok := getenv('GKEEPBAK_TOKEN')) or bomb("authtok unset")
     (email := getenv('GKEEPBAK_EMAIL')) or bomb("email unset")
 
     keep = gkeepapi.Keep()
 
-    try: olddata = load(infile)
-    except JSONDecodeError:
+    chdir(bakdir)
+    if statefiles := glob('state-20????????????.json.zst'):
+        latest = sorted(statefiles)[-1]
+        infile = open(latest, 'rb')
+        zinfile = zstd.open(infile)
+        try: olddata = load(zinfile)
+        except JSONDecodeError:
+            bomb(f"problem parsing json from {latest}")
+    else:
         err("initial run, full download")
         olddata = None
 
     keep.authenticate(email, authtok, state=olddata)
     newdata = keep.dump()
 
+    # todo: not used at the moment, see commented-out err() below
     fn = lambda f: f['timestamps']['updated']
     oldlast = fn(sorted(olddata['nodes'], key=fn)[-1])
     newlast = fn(sorted(newdata['nodes'], key=fn)[-1])
 
-    if oldlast != newlast:
-        old = dt.fromisoformat(oldlast)
-        new = dt.fromisoformat(newlast)
-        stamp = new.strftime('%Y%m%d%H%M%S')
-        since = (new - old).total_seconds() / 60 / 60
-        #err(f"newest: {stamp}, since: {since:0.2g} hours")
-        dump(newdata, outfile)
+    # todo: updated timestamp seems to always change, even with no changes to
+    # the data itself.  so we never actually take this branch.  need to do a
+    # full-struct comparison, less the timestamp.
+    #
+    if oldlast == newlast:
+        exit(EXIT_SUCCESS)
+
+    fmt = "%Y%m%d%H%M%S"
+    old = dt.fromisoformat(oldlast)
+    new = dt.fromisoformat(newlast)
+    now = dt.now().strftime(fmt)
+    stamp = new.strftime(fmt)
+    since = (new - old).total_seconds() / 60 / 60
+    #err(f"newest: {stamp}, since: {since:0.2g} hours")
+
+    outfile = open(f"state-{now}.json.zst", 'wb')
+    zoutfile = zstd.open(outfile, 'w')
+    # json.load() supports bytes, but .dump() can only write strings
+    #dump(newdata, zoutfile)
+    newbytes = dumps(newdata).encode()
+    zoutfile.write(newbytes)
+    zoutfile.close()
 
 
 def main():
@@ -97,44 +150,23 @@ def main():
     if debug == 1:
         breakpoint()
 
+    bakdir = process_args()
+    check_sanity(bakdir)
+
     try: subprogram = globals()[invname]
     except (KeyError, TypeError):
         from inspect import trace
         if len(trace()) == 1: bomb("unimplemented")
         else: raise
 
-    return subprogram()
+    return subprogram(bakdir)
 
 ###
 
 if __name__ == "__main__":
 
     invname = basename(argv[0])
-
-    outfile = stdout
-    stdinfd = stdin.fileno()
-    stdoutfd = stdout.fileno()
-
-    if isatty(stdinfd):
-        # we want either empty or no stdin to trigger json decode error later
-        infile = open(devnull)
-    else:
-        # pdb will need stdio fds, so move and reopen
-        try:
-            if select([stdin], [], [], 0)[0]:
-                infile = open(dup(stdinfd), 'r'); osclose(stdinfd)
-                outfile = open(dup(stdoutfd), 'a'); osclose(stdoutfd)
-                try:
-                    # tty must use fd 0/1 for pdb readline, cpython bug 73582
-                    stdin = open('/dev/tty', 'r')
-                    stdout = open('/dev/tty', 'a')
-                except:
-                    pass  # no ctty, but then pdb would not be in use
-            else:
-                bomb("must supply json or empty data on stdin")
-
-        except KeyboardInterrupt:
-            bomb("interrupted")
+    args = argv[1:]
 
     from bdb import BdbQuit
     if debug := int(getenv('DEBUG') or 0):
@@ -153,13 +185,9 @@ if __name__ == "__main__":
         if debug: pdb.post_mortem()
         else: bomb("aborting...")
     finally:  # cpython bug 55589
-        try:
-            outfile.flush()
-            stdout.flush()
+        try: stdout.flush()
         finally:
-            try:
-                outfile.close()
-                stdout.close()
+            try: stdout.close()
             finally:
                 try: stderr.flush()
                 except: pass
