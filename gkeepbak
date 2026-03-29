@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
 gkeepbak
-  read old state backup file, sync with api, make new backup
+  read old state backup file, compare to api, make new backup if changed
 
 desc:
   - maintains zstd-compressed backups of google keep data
   - globs backup files in arg1 dir, reads most recent serialized state
   - if no backup files, obtain keep data anew from api (expensive)
   - otherwise, uses api to sync from upstream, does incremental download
+  - if changed records, write new serialized json for comparison next time
   - requires $GKEEPBAK_EMAIL for account, $GKEEPBAK_TOKEN for master token
 
 deps:
@@ -27,6 +28,7 @@ import argparse
 from compression import zstd
 from select import select
 from shutil import which
+from copy import deepcopy
 from glob import glob
 from sys import argv, stdin, stdout, stderr
 
@@ -116,17 +118,33 @@ def gkeepbak(bakdir):
     keep.authenticate(email, authtok, state=olddata)
     newdata = keep.dump()
 
+    oldnodes = olddata['nodes']
+    newnodes = newdata['nodes']
+    bothsame = False
+    if len(oldnodes) == len(newnodes):
+        # test if last run differs, but we remove sortValue, so use copies
+        fn = lambda d: d['id']
+        oldcp = sorted(deepcopy(oldnodes), key=fn)
+        newcp = sorted(deepcopy(newnodes), key=fn)
+        for i in range(len(oldcp)):
+            if oldcp[i]['id'] != newcp[i]['id']:
+                # if ids changed, they differ, no need to compare the rest
+                break
+            else:
+                bothsame = True
+                # we'll do further comparison; sort values change just by
+                # looking at notes
+                del oldcp[i]['sortValue'], newcp[i]['sortValue']
+        if bothsame:
+            # deep-compare hack using json
+            if dumps(oldcp, sort_keys=True) == dumps(newcp, sort_keys=True):
+                # they are otherwise the same, no need to write a new backup
+                exit(EXIT_SUCCESS)
+
     # todo: not used at the moment, see commented-out err() below
     fn = lambda f: f['timestamps']['updated']
-    oldlast = fn(sorted(olddata['nodes'], key=fn)[-1])
-    newlast = fn(sorted(newdata['nodes'], key=fn)[-1])
-
-    # todo: updated timestamp seems to always change, even with no changes to
-    # the data itself.  so we never actually take this branch.  need to do a
-    # full-struct comparison, less the timestamp.
-    #
-    if oldlast == newlast:
-        exit(EXIT_SUCCESS)
+    oldlast = fn(sorted(oldnodes, key=fn)[-1])
+    newlast = fn(sorted(newnodes, key=fn)[-1])
 
     fmt = "%Y%m%d%H%M%S"
     old = dt.fromisoformat(oldlast)
