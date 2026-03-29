@@ -46,6 +46,7 @@ from os import (
 )
 
 from datetime import datetime as dt
+from subprocess import call
 
 import gkeepapi
 
@@ -94,6 +95,13 @@ def check_sanity(dest):
 
     if not access(dest, W_OK):
         bomb(f"cannot write to destdir '{dest}'")
+
+    if which('uplink'):
+        retry_for_secs = 21600
+        if call(f"uplink -w {retry_for_secs}".split()) != 0:
+            bomb(f"no uplink after {retry_for_secs} secs")
+    else:
+        err("skipping uplink check, no such executable")
 
 
 def gkeepbak(bakdir):
