@@ -27,8 +27,10 @@ import argparse
 
 from compression import zstd
 from subprocess import call
+from functools import partial
 from select import select
 from shutil import which
+from stat import S_IWUSR, S_IRUSR
 from copy import deepcopy
 from glob import glob
 from sys import argv, stdin, stdout, stderr
@@ -36,17 +38,19 @@ from sys import argv, stdin, stdout, stderr
 from json import dumps, load
 from json.decoder import JSONDecodeError
 
-from os.path import basename, dirname, isdir, exists, abspath
+from os.path import basename, splitext, dirname, isdir, exists, abspath
 from os import (
     getenv, unsetenv,
     getcwd, chdir, makedirs,
     access, R_OK, W_OK,
+    open as osopen,
     close as osclose,
     EX_OK as EXIT_SUCCESS,
     EX_SOFTWARE as EXIT_FAILURE,
 )
 
 from datetime import datetime as dt
+from difflib import unified_diff as udiff
 
 import gkeepapi
 
@@ -125,31 +129,31 @@ def gkeepbak(bakdir):
 
     keep.authenticate(email, authtok, state=olddata)
     newdata = keep.dump()
-
     oldnodes = olddata['nodes']
     newnodes = newdata['nodes']
+
+    # we'll test if last run differs, but we remove sortValue, so use copies
+    fn = lambda d: d['id']
+    oldcp = sorted(deepcopy(oldnodes), key=fn)
+    newcp = sorted(deepcopy(newnodes), key=fn)
+
+    # sortValues change just by looking at notes, so ignore for change detect
+    for i in range(len(oldcp)):
+        del oldcp[i]['sortValue'], newcp[i]['sortValue']
+
     bothsame = False
     if len(oldnodes) == len(newnodes):
-        # test if last run differs, but we remove sortValue, so use copies
-        fn = lambda d: d['id']
-        oldcp = sorted(deepcopy(oldnodes), key=fn)
-        newcp = sorted(deepcopy(newnodes), key=fn)
         for i in range(len(oldcp)):
-            if oldcp[i]['id'] != newcp[i]['id']:
-                # if ids changed, they differ, no need to compare the rest
-                break
-            else:
-                bothsame = True
-                # we'll do further comparison; sort values change just by
-                # looking at notes
-                del oldcp[i]['sortValue'], newcp[i]['sortValue']
-        if bothsame:
-            # deep-compare hack using json
-            if dumps(oldcp, sort_keys=True) == dumps(newcp, sort_keys=True):
-                # they are otherwise the same, no need to write a new backup
-                exit(EXIT_SUCCESS)
+            # if ids changed, they differ
+            if oldcp[i]['id'] != newcp[i]['id']: break
+            else: bothsame = True
 
-    # todo: not used at the moment, see commented-out err() below
+    # deep-compare hack of serialized data, less sortValue and last-updated
+    oldjson = dumps(oldcp, sort_keys=True, indent=2)
+    newjson = dumps(newcp, sort_keys=True, indent=2)
+    if bothsame and oldjson == newjson:
+        exit(EXIT_SUCCESS)  # no need for new bakfile
+
     fn = lambda f: f['timestamps']['updated']
     oldlast = fn(sorted(oldnodes, key=fn)[-1])
     newlast = fn(sorted(newnodes, key=fn)[-1])
@@ -162,14 +166,26 @@ def gkeepbak(bakdir):
     since = (new - old).total_seconds() / 60 / 60
     #err(f"newest: {stamp}, since: {since:0.2g} hours")
 
-    outfile = open(f"state-{now}.json.zst", 'wb')
+    outname = f"state-{now}.json.zst"
+    outmode = S_IWUSR | S_IRUSR  # python open() does not have file mode parm
+    outfile = open(outname, 'xb', opener=partial(osopen, mode=outmode))
     zoutfile = zstd.open(outfile, 'w')
     # json.load() supports bytes, but .dump() can only write strings
     #dump(newdata, zoutfile)
+
     newbytes = dumps(newdata).encode()
     zoutfile.write(newbytes)
     zoutfile.close()
 
+    # display a diff for what changed.  google seems to "expire" some old
+    # notes without me telling it to, which contradicts posts about non-expiry
+    # and is not documented.  currently investigating.
+    #
+    oldl = oldjson.splitlines(keepends=True)
+    newl = newjson.splitlines(keepends=True)
+    oldname = splitext(latest)[0]
+    newname = splitext(outname)[0]
+    print("".join(udiff(oldl, newl, fromfile=oldname, tofile=newname)))
 
 def main():
 
