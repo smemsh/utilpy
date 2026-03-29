@@ -18,7 +18,7 @@ deps:
 __url__     = 'https://github.com/smemsh/utilpy/'
 __author__  = 'Scott Mcdermott <scott@smemsh.net>'
 __license__ = 'GPL-2.0'
-__devskel__ = '0.8.1'
+__devskel__ = '0.10.0'
 
 from sys import exit, hexversion
 if hexversion < 0x030e00f0: exit("minpython: %s" % hexversion)
