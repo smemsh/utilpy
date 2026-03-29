@@ -158,10 +158,10 @@ def gkeepbak(bakdir):
     oldlast = fn(sorted(oldnodes, key=fn)[-1])
     newlast = fn(sorted(newnodes, key=fn)[-1])
 
-    fmt = "%Y%m%d%H%M%S"
+    fmt = "%Y%m%d%H%M%S"  # still used
     old = dt.fromisoformat(oldlast)
     new = dt.fromisoformat(newlast)
-    now = dt.now().strftime(fmt)
+    now = dt.now().strftime(fmt)  # still used
     stamp = new.strftime(fmt)
     since = (new - old).total_seconds() / 60 / 60
     #err(f"newest: {stamp}, since: {since:0.2g} hours")
