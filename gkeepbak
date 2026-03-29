@@ -26,6 +26,7 @@ if hexversion < 0x030e00f0: exit("minpython: %s" % hexversion)
 import argparse
 
 from compression import zstd
+from subprocess import call
 from select import select
 from shutil import which
 from copy import deepcopy
@@ -46,7 +47,6 @@ from os import (
 )
 
 from datetime import datetime as dt
-from subprocess import call
 
 import gkeepapi
 
