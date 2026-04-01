@@ -191,7 +191,7 @@ def gkeepbak(bakdir):
     newname = splitext(outname)[0]
     diff = udiff(oldl, newl, fromfile=oldname, tofile=newname)
 
-    msg(f"newest: {stamp}, since: {since:0.2g} hours, diff:")
+    msg(f"newest: {stamp}, since: {since:0.2f} hours, diff:")
     print("".join(diff))
 
 
