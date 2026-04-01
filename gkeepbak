@@ -182,9 +182,9 @@ def gkeepbak(bakdir):
     zoutfile.write(newbytes)
     zoutfile.close()
 
-    # display a diff for what changed.  google seems to "expire" some old
-    # notes without me telling it to, which contradicts posts about non-expiry
-    # and is not documented.  currently investigating.
+    # compute a diff of what changed since last run.  google seems to
+    # "expire" some old notes without me telling it to, which contradicts
+    # posts about non-expiry and is not documented.  currently investigating.
     #
     oldl = oldjson.splitlines(keepends=True)
     newl = newjson.splitlines(keepends=True)
