@@ -163,13 +163,12 @@ def gkeepbak(bakdir):
     oldlast = fn(sorted(oldnodes, key=fn)[-1])
     newlast = fn(sorted(newnodes, key=fn)[-1])
 
-    fmt = "%Y%m%d%H%M%S"  # still used
+    fmt = "%Y%m%d%H%M%S"
     old = dt.fromisoformat(oldlast)
     new = dt.fromisoformat(newlast)
-    now = dt.now().strftime(fmt)  # still used
+    now = dt.now().strftime(fmt)
     stamp = new.strftime(fmt)
     since = (new - old).total_seconds() / 60 / 60
-    #err(f"newest: {stamp}, since: {since:0.2g} hours")
 
     outname = f"state-{now}.json.zst"
     outmode = S_IWUSR | S_IRUSR  # python open() does not have file mode parm
@@ -190,7 +189,11 @@ def gkeepbak(bakdir):
     newl = newjson.splitlines(keepends=True)
     oldname = splitext(latest)[0]
     newname = splitext(outname)[0]
-    print("".join(udiff(oldl, newl, fromfile=oldname, tofile=newname)))
+    diff = udiff(oldl, newl, fromfile=oldname, tofile=newname)
+
+    msg(f"newest: {stamp}, since: {since:0.2g} hours, diff:")
+    print("".join(diff))
+
 
 def main():
 
