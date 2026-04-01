@@ -148,7 +148,7 @@ def gkeepbak(bakdir):
             if oldcp[i]['id'] != newcp[i]['id']: break
             else: bothsame = True
 
-    # deep-compare hack of serialized data, less sortValue and last-updated
+    # deep-compare using serialized data, less sortValue and last-updated
     oldjson = dumps(oldcp, sort_keys=True, indent=2)
     newjson = dumps(newcp, sort_keys=True, indent=2)
     if bothsame and oldjson == newjson:
