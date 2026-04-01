@@ -131,7 +131,8 @@ def gkeepbak(bakdir):
         err("initial run, full download")
         olddata = None
 
-    keep.authenticate(email, authtok, state=olddata)
+    # must pass a copy because it gets mutated internally, see our issue 192
+    keep.authenticate(email, authtok, state=deepcopy(olddata))
     newdata = keep.dump()
     oldnodes = olddata['nodes']
     newnodes = newdata['nodes']
