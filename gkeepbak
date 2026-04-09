@@ -155,8 +155,8 @@ def gkeepbak(bakdir):
             else: bothsame = True
 
     # deep-compare nodes using their serialized form (less deleted sortValue)
-    oldjson = dumps(oldcp, sort_keys=True, indent=2)
-    newjson = dumps(newcp, sort_keys=True, indent=2)
+    oldjson = dumps(oldcp, sort_keys=True)
+    newjson = dumps(newcp, sort_keys=True)
     if bothsame and oldjson == newjson:
         exit(EXIT_SUCCESS)  # no need for new bakfile
 
@@ -182,18 +182,27 @@ def gkeepbak(bakdir):
     zoutfile.write(newbytes)
     zoutfile.close()
 
-    # compute a diff of what changed since last run.  google seems to
-    # "expire" some old notes without me telling it to, which contradicts
-    # posts about non-expiry and is not documented.  currently investigating.
+    # display changes since last run.  since nodes could have been added or
+    # removed, and have fairly random keys, diffing the full oldjson/newjson
+    # (with indent) can contain a bunch of bogus delta and make eyeballing
+    # difficult.  so we do compare each node separately.
     #
-    oldl = oldjson.splitlines(keepends=True)
-    newl = newjson.splitlines(keepends=True)
-    oldname = splitext(latest)[0]
-    newname = splitext(outname)[0]
-    diff = udiff(oldl, newl, fromfile=oldname, tofile=newname)
-
-    msg(f"newest: {stamp}, since: {since:0.2f} hours, diff:")
-    print("".join(diff))
+    allids = set([node['id'] for node in oldcp + newcp])
+    olddict = {d['id']: d for d in oldcp}
+    newdict = {d['id']: d for d in newcp}
+    msg(f"newest: {stamp}, since: {since:0.2f} hours, diffs:")
+    for k in allids:
+        node1 = olddict.get(k)
+        node2 = newdict.get(k)
+        dump1 = "" if not node1 else dumps(node1, sort_keys=True, indent=2)
+        dump2 = "" if not node2 else dumps(node2, sort_keys=True, indent=2)
+        lines1 = dump1.splitlines(keepends=True)
+        lines2 = dump2.splitlines(keepends=True)
+        name1 = node1.get('title', node1.get('id', '/dev/null'))
+        name2 = node2.get('title', node2.get('id', '/dev/null'))
+        if diff := udiff(lines1, lines2, fromfile=name1, tofile=name2):
+            print()
+            print("".join(diff))
 
 
 def main():
