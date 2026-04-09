@@ -143,8 +143,9 @@ def gkeepbak(bakdir):
     newcp = sorted(deepcopy(newnodes), key=fn)
 
     # sortValues change just by looking at notes, so ignore for change detect
-    for i in range(len(oldcp)):
-        del oldcp[i]['sortValue'], newcp[i]['sortValue']
+    for cp in oldcp, newcp:
+        for i in range(len(cp)):
+            del cp[i]['sortValue']
 
     bothsame = False
     if len(oldnodes) == len(newnodes):
