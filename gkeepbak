@@ -192,8 +192,8 @@ def gkeepbak(bakdir):
     newdict = {d['id']: d for d in newcp}
     msg(f"newest: {stamp}, since: {since:0.2f} hours, diffs:")
     for k in allids:
-        node1 = olddict.get(k)
-        node2 = newdict.get(k)
+        node1 = olddict.get(k, {})
+        node2 = newdict.get(k, {})
         dump1 = "" if not node1 else dumps(node1, sort_keys=True, indent=2)
         dump2 = "" if not node2 else dumps(node2, sort_keys=True, indent=2)
         lines1 = dump1.splitlines(keepends=True)
