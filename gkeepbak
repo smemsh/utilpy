@@ -28,7 +28,6 @@ import argparse
 from compression import zstd
 from subprocess import call
 from functools import partial
-from textwrap import dedent
 from select import select
 from shutil import which
 from stat import S_IWUSR, S_IRUSR
@@ -193,15 +192,21 @@ def gkeepbak(bakdir):
     newdict = {d['id']: d for d in newcp}
     msg(f"newest: {stamp}, since: {since:0.2f} hours, diffs:")
     for k in allids:
-        for n in 1, 2: eval(f"""
-            node{n} = olddict.get(k, {{}})
-            dump{n} = "" if not node{n} else dumps(node{n}, sort_keys=True, indent=2)
-            lines{n} = dump{n}.splitlines(keepends=True)
-            name{n} = node{n}.get('title', node{n}.get('id', '/dev/null'))
-        """.dedent())  # todo: py 3.15 should give d"""
-        if diff := udiff(lines1, lines2, fromfile=name1, tofile=name2):
-            if not (diff := "".join(diff)) or diff.isspace(): continue
-            else: print("\n" + diff)
+        params = list()
+        for d in olddict, newdict:
+            parm = {}
+            node = d.get(k, {})
+            dump = "" if not node else dumps(node, sort_keys=True, indent=2)
+            parm['name'] = node.get('title', node.get('id', '/dev/null'))
+            parm['lines'] = dump.splitlines(keepends=True)
+            params.append(parm)
+        args = params[0]['lines'], params[1]['lines']
+        kwargs = {'fromfile': params[0]['name'], 'tofile': params[1]['name']}
+        if diff := list(udiff(*args, **kwargs)):
+            if not (diff := "".join(diff)) or diff.isspace():
+                continue
+            else:
+                print("\n" + diff)
 
 
 def main():
