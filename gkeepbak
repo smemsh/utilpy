@@ -198,7 +198,7 @@ def gkeepbak(bakdir):
             dump{n} = "" if not node{n} else dumps(node{n}, sort_keys=True, indent=2)
             lines{n} = dump{n}.splitlines(keepends=True)
             name{n} = node{n}.get('title', node{n}.get('id', '/dev/null'))
-        """).dedent()  # todo: py 3.15 should give d"""
+        """.dedent())  # todo: py 3.15 should give d"""
         if diff := udiff(lines1, lines2, fromfile=name1, tofile=name2):
             if not (diff := "".join(diff)) or diff.isspace(): continue
             else: print("\n" + diff)
