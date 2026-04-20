@@ -28,6 +28,7 @@ import argparse
 from compression import zstd
 from subprocess import call
 from functools import partial
+from textwrap import dedent
 from select import select
 from shutil import which
 from stat import S_IWUSR, S_IRUSR
@@ -192,14 +193,12 @@ def gkeepbak(bakdir):
     newdict = {d['id']: d for d in newcp}
     msg(f"newest: {stamp}, since: {since:0.2f} hours, diffs:")
     for k in allids:
-        node1 = olddict.get(k, {})
-        node2 = newdict.get(k, {})
-        dump1 = "" if not node1 else dumps(node1, sort_keys=True, indent=2)
-        dump2 = "" if not node2 else dumps(node2, sort_keys=True, indent=2)
-        lines1 = dump1.splitlines(keepends=True)
-        lines2 = dump2.splitlines(keepends=True)
-        name1 = node1.get('title', node1.get('id', '/dev/null'))
-        name2 = node2.get('title', node2.get('id', '/dev/null'))
+        for n in 1, 2: eval(f"""
+            node{n} = olddict.get(k, {{}})
+            dump{n} = "" if not node{n} else dumps(node{n}, sort_keys=True, indent=2)
+            lines{n} = dump{n}.splitlines(keepends=True)
+            name{n} = node{n}.get('title', node{n}.get('id', '/dev/null'))
+        """).dedent()  # todo: py 3.15 should give d"""
         if diff := udiff(lines1, lines2, fromfile=name1, tofile=name2):
             if not (diff := "".join(diff)) or diff.isspace(): continue
             else: print("\n" + diff)
