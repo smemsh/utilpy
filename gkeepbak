@@ -201,8 +201,8 @@ def gkeepbak(bakdir):
         name1 = node1.get('title', node1.get('id', '/dev/null'))
         name2 = node2.get('title', node2.get('id', '/dev/null'))
         if diff := udiff(lines1, lines2, fromfile=name1, tofile=name2):
-            print()
-            print("".join(diff))
+            if not (diff := "".join(diff)) or diff.isspace(): continue
+            else: print("\n" + diff)
 
 
 def main():
