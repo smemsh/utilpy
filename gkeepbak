@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
 gkeepbak
-  read old state backup file, compare to api, make new backup if changed
+  glob most recent backup, compare via keep api, write new bakfile if changed
 
 desc:
   - maintains zstd-compressed backups of google keep data
-  - globs backup files in arg1 dir, reads most recent serialized state
-  - if no backup files, obtain keep data anew from api (expensive)
+  - globs exiting serialized state backups in $1 dir, reads most recent
+  - if no backup files, obtain full keep data anew from api (expensive)
   - otherwise, uses api to sync from upstream, does incremental download
   - if changed records, write new serialized json for comparison next time
+  - outputs difference with previous run to stdout (ie, intended for cron)
   - requires $GKEEPBAK_EMAIL for account, $GKEEPBAK_TOKEN for master token
 
 deps:
