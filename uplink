@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""
+uplink
+  determines if connectivity exists, by default to 8.8.8.8
+
+desc:
+  - sends a 3-round icmp-echo-request burst to google dns to check connectivity
+  - waits a minute and repeats for -w/--wait seconds (default oneshot)
+  - emits explanatory message on stderr upon failure
+
+todo:
+  - configure other parameters than wait
+
+"""
+__url__     = 'https://github.com/smemsh/utilpy/'
+__author__  = 'Scott Mcdermott <scott@smemsh.net>'
+__license__ = 'GPL-2.0'
+__devskel__ = '0.12.2'
+
+import sys
+if sys.hexversion < 0x030a00f0:
+    sys.exit("minpython: %s" % sys.hexversion)
+
+import argparse
+
+from time import sleep, monotonic
+from subprocess import call, DEVNULL
+
+from os.path import basename
+from os import (
+    getenv, unsetenv,
+    EX_OK as EXIT_SUCCESS,
+    EX_SOFTWARE as EXIT_FAILURE,
+)
+
+###
+
+def msg(*args, **kwargs):
+    print(*args, **kwargs)
+
+def err(*args, **kwargs):
+    msg(*args, file=sys.stderr, **kwargs)
+
+def bomb(*args, **kwargs):
+    err(*args, **kwargs)
+    sys.exit(EXIT_FAILURE)
+
+###
+
+def process_args():
+
+    global args
+
+    def addopt(p, flagchar, longopt, help=None, /, **kwargs):
+        options = list(("-%s --%s" % (flagchar, longopt)).split())
+        p.add_argument(*options, help=help, **kwargs)
+
+    p = argparse.ArgumentParser(
+        prog            = invname,
+        description     = __doc__.split("\ntodo:")[0].strip(),
+        allow_abbrev    = False,
+        formatter_class = argparse.RawTextHelpFormatter,
+    )
+    addopt(p, 'w', 'wait', 'total wait time in seconds')
+    args = p.parse_args(args)
+    if args.wait is not None:
+        args.wait = int(args.wait)
+
+
+def uplink():
+    if not _uplink(wait=args.wait):
+        bomb(f"no uplink after {args.wait}s")
+
+
+def _uplink(count=3, delay=100, wait=None, secs=60, host='1.2.3.4'):
+    sofar = 0
+    if wait and wait <= secs:
+        bomb("wait must exceed secs")
+    while True:
+        start = monotonic()
+        cmd = f"ping -i{delay / 1000} -c{count} -w3 {host}"
+        if call(cmd.split(), stdout=DEVNULL) == EXIT_SUCCESS: return True
+        if wait is None: return False
+        if wait > 0:
+            sofar += monotonic() - start
+            if sofar >= wait: return False
+        sleep(secs)
+        sofar += secs
+
+###
+
+def main():
+
+    if debug == 1:
+        breakpoint()
+
+    process_args()
+
+    try: subprogram = globals()[invname]
+    except (KeyError, TypeError):
+        from inspect import trace
+        if len(trace()) == 1: bomb("unimplemented")
+        else: raise
+
+    return subprogram()
+
+###
+
+if __name__ == "__main__":
+
+    invname = basename(sys.argv[0])
+    args = sys.argv[1:]
+
+    from bdb import BdbQuit
+    if debug := int(getenv('DEBUG') or 0):
+        import pdb
+        from pprint import pp
+        err('debug: enabled')
+        unsetenv('DEBUG')  # otherwise forked children hang
+
+    try: main()
+    except BdbQuit: bomb("debug: stop")
+    except SystemExit: raise
+    except KeyboardInterrupt: bomb("interrupted")
+    except:
+        from traceback import print_exc
+        print_exc(file=sys.stderr)
+        if debug: pdb.post_mortem()
+        else: bomb("aborting...")
+    finally:  # cpython bug 55589
+        try: sys.stdout.flush()
+        finally:
+            try: sys.stdout.close()
+            finally:
+                try: sys.stderr.flush()
+                except: pass
+                finally: sys.stderr.close()
