@@ -106,7 +106,7 @@ def check_sanity(dest):
         bomb(f"cannot write to destdir '{dest}'")
 
     if not uplink(wait=21600):
-        bomb(f"no uplink after 0.25 days")
+        bomb(f"no uplink after {wait}s")
 
 
 def uplink(count=3, delay=100, wait=None, secs=60, host='8.8.8.8'):
