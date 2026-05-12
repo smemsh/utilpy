@@ -27,15 +27,15 @@ if sys.hexversion < 0x030a00f0:
 
 import argparse
 
-from compression import zstd
-from subprocess import call, DEVNULL
-from functools import partial
-from select import select
-from shutil import which
-from stat import S_IWUSR, S_IRUSR
-from copy import deepcopy
 from glob import glob
+from copy import deepcopy
 from time import sleep, monotonic
+from stat import S_IWUSR, S_IRUSR
+from shutil import which
+from select import select
+from functools import partial
+from subprocess import call, DEVNULL
+from compression import zstd
 
 from json import dumps, load
 from json.decoder import JSONDecodeError
