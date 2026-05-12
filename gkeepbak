@@ -19,22 +19,22 @@ deps:
 __url__     = 'https://github.com/smemsh/utilpy/'
 __author__  = 'Scott Mcdermott <scott@smemsh.net>'
 __license__ = 'GPL-2.0'
-__devskel__ = '0.11.2'
+__devskel__ = '0.12.2'
 
-from sys import exit, hexversion
-if hexversion < 0x030e00f0: exit("minpython: %s" % hexversion)
+import sys
+if sys.hexversion < 0x030a00f0:
+    sys.exit("minpython: %s" % sys.hexversion)
 
 import argparse
 
 from compression import zstd
-from subprocess import call
+from subprocess import call, DEVNULL
 from functools import partial
 from select import select
 from shutil import which
 from stat import S_IWUSR, S_IRUSR
 from copy import deepcopy
 from glob import glob
-from sys import argv, stdin, stdout, stderr
 
 from json import dumps, load
 from json.decoder import JSONDecodeError
@@ -61,7 +61,7 @@ def msg(*args, **kwargs):
     print(*args, **kwargs)
 
 def err(*args, **kwargs):
-    msg(*args, file=stderr, **kwargs)
+    msg(*args, file=sys.stderr, **kwargs)
 
 def bomb(*args, **kwargs):
     err(*args, **kwargs)
@@ -104,12 +104,24 @@ def check_sanity(dest):
     if not access(dest, W_OK):
         bomb(f"cannot write to destdir '{dest}'")
 
-    if which('uplink'):
-        retry_for_secs = 21600
-        if call(f"uplink -w {retry_for_secs}".split()) != 0:
-            bomb(f"no uplink after {retry_for_secs} secs")
-    else:
-        err("skipping uplink check, no such executable")
+    if not uplink(wait=21600):
+        bomb(f"no uplink after 0.25 days")
+
+
+def uplink(count=3, delay=100, wait=None, secs=60, host='8.8.8.8'):
+    sofar = 0
+    if wait and wait <= secs:
+        bomb("wait must exceed secs")
+    while True:
+        start = monotonic()
+        cmd = f"ping -i{delay / 1000} -c{count} -w3 {host}"
+        if call(cmd.split(), stdout=DEVNULL) == EXIT_SUCCESS: return True
+        if wait is None: return False
+        if wait > 0:
+            sofar += monotonic() - start
+            if sofar >= wait: return False
+        sleep(secs)
+        sofar += secs
 
 
 def gkeepbak(bakdir):
@@ -229,8 +241,8 @@ def main():
 
 if __name__ == "__main__":
 
-    invname = basename(argv[0])
-    args = argv[1:]
+    invname = basename(sys.argv[0])
+    args = sys.argv[1:]
 
     from bdb import BdbQuit
     if debug := int(getenv('DEBUG') or 0):
@@ -245,14 +257,14 @@ if __name__ == "__main__":
     except KeyboardInterrupt: bomb("interrupted")
     except:
         from traceback import print_exc
-        print_exc(file=stderr)
+        print_exc(file=sys.stderr)
         if debug: pdb.post_mortem()
         else: bomb("aborting...")
     finally:  # cpython bug 55589
-        try: stdout.flush()
+        try: sys.stdout.flush()
         finally:
-            try: stdout.close()
+            try: sys.stdout.close()
             finally:
-                try: stderr.flush()
+                try: sys.stderr.flush()
                 except: pass
-                finally: stderr.close()
+                finally: sys.stderr.close()
