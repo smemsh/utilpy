@@ -74,9 +74,9 @@ def uplink():
 
 
 def _uplink(count=3, delay=100, wait=None, secs=60, host='1.2.3.4'):
-    sofar = 0
     if wait and wait <= secs:
         bomb("wait must exceed secs")
+    sofar = 0
     while True:
         start = monotonic()
         cmd = f"ping -i{delay / 1000} -c{count} -w3 {host}"
