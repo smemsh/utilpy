@@ -73,7 +73,7 @@ def uplink():
         bomb(f"no uplink after {args.wait}s")
 
 
-def _uplink(count=3, delay=100, wait=None, secs=60, host='1.2.3.4'):
+def _uplink(count=3, delay=100, wait=None, secs=60, host='8.8.8.8'):
     if wait and wait <= secs:
         bomb("wait must exceed secs")
     sofar = 0
