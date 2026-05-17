@@ -7,6 +7,7 @@ desc:
   - sends a 3-round icmp-echo-request burst to google dns to check connectivity
   - waits a minute and repeats for -w/--wait seconds (default oneshot)
   - emits explanatory message on stderr upon failure
+  - wraps ping, tested with https://github.com/iputils/iputils/
 
 todo:
   - configure other parameters than wait
